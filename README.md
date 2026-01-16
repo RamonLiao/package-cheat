@@ -16,10 +16,10 @@ Then run `pkgcheat` to launch, or `./list-all-packages.sh` for a quick package l
 
 ## Supported Package Managers
 
-**JavaScript**: npm, pnpm, yarn, bun
-**macOS**: brew, port
-**Python**: pip, uv, poetry
-**Other**: cargo (Rust), go (Go), gem (Ruby)
+- **JavaScript**: npm, pnpm, yarn, bun
+- **macOS**: brew, port
+- **Python**: pip, uv, poetry
+- **Other**: cargo (Rust), go (Go), gem (Ruby)
 
 ## Usage
 
@@ -37,6 +37,8 @@ Opens a menu where you can:
 - Export cheatsheets to markdown
 
 ### Command Line
+
+**Format**: `pkgcheat [OPTIONS] [MANAGER]`
 
 ```bash
 pkgcheat npm                # Show npm cheatsheet
