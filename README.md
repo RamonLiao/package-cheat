@@ -66,8 +66,8 @@ If you prefer to install manually:
 
 ```bash
 cd ~/Documents/Code/DevTools
-git clone <repository-url> package-cheat
-# OR download and extract manually
+git clone git@github.com:RamonLiao/package-cheat.git
+cd package-cheat
 ```
 
 2. **Make the script executable:**
