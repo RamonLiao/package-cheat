@@ -1,9 +1,9 @@
 #!/bin/bash
 
 ################################################################################
-# pkgcheat Installation Script
+# package-cheat Installation Script
 #
-# This script helps you install pkgcheat and add it to your PATH
+# This script helps you install pkgcheat and list-all-packages to your PATH
 ################################################################################
 
 set -e
@@ -19,21 +19,28 @@ RESET='\033[0m'
 # Get the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PKGCHEAT_BIN="$SCRIPT_DIR/bin/pkgcheat"
+LISTPKG_BIN="$SCRIPT_DIR/bin/list-all-packages"
 
 echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════════${RESET}"
-echo -e "${BOLD}${BLUE}  pkgcheat Installation Script${RESET}"
+echo -e "${BOLD}${BLUE}  package-cheat Installation Script${RESET}"
 echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════════${RESET}"
 echo ""
 
-# Check if pkgcheat exists
+# Check if both scripts exist
 if [[ ! -f "$PKGCHEAT_BIN" ]]; then
     echo -e "${RED}✗ Error: pkgcheat script not found at $PKGCHEAT_BIN${RESET}"
     exit 1
 fi
 
-# Make sure it's executable
+if [[ ! -f "$LISTPKG_BIN" ]]; then
+    echo -e "${RED}✗ Error: list-all-packages script not found at $LISTPKG_BIN${RESET}"
+    exit 1
+fi
+
+# Make sure scripts are executable
 chmod +x "$PKGCHEAT_BIN"
-echo -e "${GREEN}✓ Made pkgcheat executable${RESET}"
+chmod +x "$LISTPKG_BIN"
+echo -e "${GREEN}✓ Made scripts executable${RESET}"
 
 # Detect shell
 SHELL_NAME=$(basename "$SHELL")
@@ -73,28 +80,38 @@ read -p "Enter your choice [1-5]: " choice
 case $choice in
     1)
         echo ""
-        echo -e "${YELLOW}Creating symlink in /usr/local/bin (requires sudo)...${RESET}"
+        echo -e "${YELLOW}Creating symlinks in /usr/local/bin (requires sudo)...${RESET}"
 
         if ! sudo ln -sf "$PKGCHEAT_BIN" /usr/local/bin/pkgcheat; then
-            echo -e "${RED}✗ Failed to create symlink${RESET}"
+            echo -e "${RED}✗ Failed to create symlink for pkgcheat${RESET}"
             exit 1
         fi
 
-        echo -e "${GREEN}✓ Successfully created symlink: /usr/local/bin/pkgcheat${RESET}"
-        echo -e "${GREEN}✓ pkgcheat is now available in your PATH${RESET}"
+        if ! sudo ln -sf "$LISTPKG_BIN" /usr/local/bin/list-all-packages; then
+            echo -e "${RED}✗ Failed to create symlink for list-all-packages${RESET}"
+            exit 1
+        fi
+
+        echo -e "${GREEN}✓ Successfully created symlinks:${RESET}"
+        echo -e "${GREEN}  - /usr/local/bin/pkgcheat${RESET}"
+        echo -e "${GREEN}  - /usr/local/bin/list-all-packages${RESET}"
+        echo -e "${GREEN}✓ Both commands are now available in your PATH${RESET}"
         ;;
 
     2)
         echo ""
-        echo -e "${YELLOW}Creating symlink in ~/bin...${RESET}"
+        echo -e "${YELLOW}Creating symlinks in ~/bin...${RESET}"
 
         # Create ~/bin if it doesn't exist
         mkdir -p ~/bin
 
-        # Create symlink
+        # Create symlinks
         ln -sf "$PKGCHEAT_BIN" ~/bin/pkgcheat
+        ln -sf "$LISTPKG_BIN" ~/bin/list-all-packages
 
-        echo -e "${GREEN}✓ Successfully created symlink: ~/bin/pkgcheat${RESET}"
+        echo -e "${GREEN}✓ Successfully created symlinks:${RESET}"
+        echo -e "${GREEN}  - ~/bin/pkgcheat${RESET}"
+        echo -e "${GREEN}  - ~/bin/list-all-packages${RESET}"
 
         # Check if ~/bin is in PATH
         if [[ ":$PATH:" != *":$HOME/bin:"* ]]; then
@@ -173,13 +190,15 @@ echo -e "${BOLD}${GREEN}  Installation Complete!${RESET}"
 echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════════${RESET}"
 echo ""
 
-# Test if pkgcheat is available
-if command -v pkgcheat >/dev/null 2>&1; then
-    echo -e "${GREEN}✓ pkgcheat is now available!${RESET}"
+# Test if commands are available
+if command -v pkgcheat >/dev/null 2>&1 && command -v list-all-packages >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ Both commands are now available!${RESET}"
     echo ""
-    echo -e "Try running: ${BOLD}pkgcheat --version${RESET}"
+    echo -e "Try running:"
+    echo -e "  ${BOLD}pkgcheat${RESET} - Interactive package manager cheatsheet"
+    echo -e "  ${BOLD}list-all-packages${RESET} - Quick list all installed packages"
 else
-    echo -e "${YELLOW}⚠ pkgcheat command not found in current session${RESET}"
+    echo -e "${YELLOW}⚠ Commands not found in current session${RESET}"
     echo ""
     if [[ $choice -eq 2 ]] || [[ $choice -eq 3 ]]; then
         echo -e "Please run: ${BOLD}source $SHELL_CONFIG${RESET}"
@@ -188,5 +207,7 @@ else
 fi
 
 echo ""
-echo -e "For help, run: ${BOLD}pkgcheat --help${RESET}"
+echo -e "For help:"
+echo -e "  ${BOLD}pkgcheat --help${RESET}"
+echo -e "  ${BOLD}list-all-packages --help${RESET}"
 echo ""
