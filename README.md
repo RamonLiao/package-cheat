@@ -2,6 +2,18 @@
 
 An interactive bash script that detects installed package managers on macOS and provides a comprehensive command reference with cheatsheets, comparison views, search functionality, and markdown export capabilities.
 
+## Quick Start
+
+Just cloned the repo? Get started in 3 commands:
+
+```bash
+git clone git@github.com:RamonLiao/package-cheat.git
+cd package-cheat
+./install.sh
+```
+
+That's it! The installer will guide you through the setup. Once installed, just type `pkgcheat` to launch.
+
 ## Features
 
 - 🔍 **Auto-detection** - Automatically detects all installed package managers on your system
@@ -48,7 +60,11 @@ An interactive bash script that detects installed package managers on macOS and 
 The easiest way to install pkgcheat is using the automated installation script:
 
 ```bash
-cd ~/Documents/Code/DevTools/package-cheat
+# Clone the repository (you can clone it anywhere)
+git clone git@github.com:RamonLiao/package-cheat.git
+cd package-cheat
+
+# Run the installer
 ./install.sh
 ```
 
@@ -62,10 +78,10 @@ The installation script will:
 
 If you prefer to install manually:
 
-1. **Clone or download the repository:**
+1. **Clone the repository:**
 
 ```bash
-cd ~/Documents/Code/DevTools
+# Clone to any location you prefer
 git clone git@github.com:RamonLiao/package-cheat.git
 cd package-cheat
 ```
@@ -73,7 +89,7 @@ cd package-cheat
 2. **Make the script executable:**
 
 ```bash
-chmod +x ~/Documents/Code/DevTools/package-cheat/bin/pkgcheat
+chmod +x bin/pkgcheat
 ```
 
 3. **Add to PATH** (choose one method):
@@ -81,12 +97,15 @@ chmod +x ~/Documents/Code/DevTools/package-cheat/bin/pkgcheat
 #### Option A: Create a symlink in a directory already in PATH
 
 ```bash
+# Get the full path to the script (run this from the package-cheat directory)
+PKGCHEAT_PATH="$(pwd)/bin/pkgcheat"
+
 # Most common location (requires sudo)
-sudo ln -s ~/Documents/Code/DevTools/package-cheat/bin/pkgcheat /usr/local/bin/pkgcheat
+sudo ln -s "$PKGCHEAT_PATH" /usr/local/bin/pkgcheat
 
 # Alternative: User-local bin directory (no sudo required)
 mkdir -p ~/bin
-ln -s ~/Documents/Code/DevTools/package-cheat/bin/pkgcheat ~/bin/pkgcheat
+ln -s "$PKGCHEAT_PATH" ~/bin/pkgcheat
 ```
 
 #### Option B: Add the bin directory to your PATH
@@ -94,21 +113,24 @@ ln -s ~/Documents/Code/DevTools/package-cheat/bin/pkgcheat ~/bin/pkgcheat
 **For Zsh (macOS Catalina and later default):**
 
 ```bash
-echo 'export PATH="$HOME/Documents/Code/DevTools/package-cheat/bin:$PATH"' >> ~/.zshrc
+# From the package-cheat directory
+echo "export PATH=\"$(pwd)/bin:\$PATH\"" >> ~/.zshrc
 source ~/.zshrc
 ```
 
 **For Bash:**
 
 ```bash
-echo 'export PATH="$HOME/Documents/Code/DevTools/package-cheat/bin:$PATH"' >> ~/.bash_profile
+# From the package-cheat directory
+echo "export PATH=\"$(pwd)/bin:\$PATH\"" >> ~/.bash_profile
 source ~/.bash_profile
 ```
 
 **For Fish:**
 
 ```bash
-fish_add_path ~/Documents/Code/DevTools/package-cheat/bin
+# From the package-cheat directory
+fish_add_path "$(pwd)/bin"
 ```
 
 4. **Verify installation:**
@@ -399,7 +421,8 @@ If you get "command not found" after installation:
 
 1. Verify the script is executable:
    ```bash
-   ls -la ~/Documents/Code/DevTools/package-cheat/bin/pkgcheat
+   # Navigate to your package-cheat directory first
+   ls -la bin/pkgcheat
    ```
    Look for `-rwxr-xr-x` permissions.
 
@@ -417,7 +440,11 @@ If you get "command not found" after installation:
 
 4. Try running with full path:
    ```bash
-   ~/Documents/Code/DevTools/package-cheat/bin/pkgcheat
+   # From the package-cheat directory
+   ./bin/pkgcheat
+
+   # Or with absolute path
+   /path/to/your/package-cheat/bin/pkgcheat
    ```
 
 ### No package managers detected
@@ -439,7 +466,8 @@ If the script reports "No package managers detected":
 If you get "Permission denied":
 
 ```bash
-chmod +x ~/Documents/Code/DevTools/package-cheat/bin/pkgcheat
+# Navigate to your package-cheat directory first
+chmod +x bin/pkgcheat
 ```
 
 ### Colors not displaying
