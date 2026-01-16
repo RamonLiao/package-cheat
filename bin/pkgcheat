@@ -966,51 +966,48 @@ menu_export_cheatsheet() {
 show_help() {
     print_header "Package Manager Cheatsheet - Help"
 
-    cat << EOF
-${BOLD}USAGE:${RESET}
-  pkgcheat [OPTIONS] [MANAGER]
-
-${BOLD}OPTIONS:${RESET}
-  -h, --help              Show this help message
-  -v, --version           Show script version
-  -l, --list              List detected package managers
-  -a, --all               Show all supported managers (even not installed)
-  -e, --export [MANAGER]  Export cheatsheet to markdown file
-                          (omit MANAGER or use 'all' for all detected)
-  -s, --search KEYWORD    Search for commands across all managers
-  -c, --compare           Compare equivalent commands across JS managers
-
-${BOLD}EXAMPLES:${RESET}
-  pkgcheat                # Launch interactive mode
-  pkgcheat npm            # Show npm cheatsheet directly
-  pkgcheat -l             # List all detected package managers
-  pkgcheat -s cache       # Search for cache-related commands
-  pkgcheat -e npm         # Export npm cheatsheet to markdown
-  pkgcheat -e all         # Export all detected managers to markdown
-  pkgcheat -c             # Show command comparison
-
-${BOLD}SUPPORTED PACKAGE MANAGERS:${RESET}
-  JavaScript/Node.js:  npm, pnpm, yarn, bun
-  macOS System:        brew, port
-  Python:              pip, uv, poetry
-  Other Languages:     cargo (Rust), go (Go), gem (Ruby)
-
-${BOLD}INTERACTIVE MODE:${RESET}
-  When run without arguments, pkgcheat launches an interactive menu where you can:
-    - View detected package managers
-    - Browse cheatsheets for each manager
-    - Compare commands across managers
-    - Search for specific commands
-    - Export cheatsheets to markdown files
-
-${BOLD}VERSION:${RESET}
-  $SCRIPT_VERSION
-
-${BOLD}REPOSITORY:${RESET}
-  Part of the Silent Alpha project
-  Location: ~/bin/pkgcheat (symlinked from project)
-
-EOF
+    echo -e "${BOLD}USAGE:${RESET}"
+    echo "  pkgcheat [OPTIONS] [MANAGER]"
+    echo ""
+    echo -e "${BOLD}OPTIONS:${RESET}"
+    echo "  -h, --help              Show this help message"
+    echo "  -v, --version           Show script version"
+    echo "  -l, --list              List detected package managers"
+    echo "  -a, --all               Show all supported managers (even not installed)"
+    echo "  -e, --export [MANAGER]  Export cheatsheet to markdown file"
+    echo "                          (omit MANAGER or use 'all' for all detected)"
+    echo "  -s, --search KEYWORD    Search for commands across all managers"
+    echo "  -c, --compare           Compare equivalent commands across JS managers"
+    echo ""
+    echo -e "${BOLD}EXAMPLES:${RESET}"
+    echo "  pkgcheat                # Launch interactive mode"
+    echo "  pkgcheat npm            # Show npm cheatsheet directly"
+    echo "  pkgcheat -l             # List all detected package managers"
+    echo "  pkgcheat -s cache       # Search for cache-related commands"
+    echo "  pkgcheat -e npm         # Export npm cheatsheet to markdown"
+    echo "  pkgcheat -e all         # Export all detected managers to markdown"
+    echo "  pkgcheat -c             # Show command comparison"
+    echo ""
+    echo -e "${BOLD}SUPPORTED PACKAGE MANAGERS:${RESET}"
+    echo "  JavaScript/Node.js:  npm, pnpm, yarn, bun"
+    echo "  macOS System:        brew, port"
+    echo "  Python:              pip, uv, poetry"
+    echo "  Other Languages:     cargo (Rust), go (Go), gem (Ruby)"
+    echo ""
+    echo -e "${BOLD}INTERACTIVE MODE:${RESET}"
+    echo "  When run without arguments, pkgcheat launches an interactive menu where you can:"
+    echo "    - View detected package managers"
+    echo "    - Browse cheatsheets for each manager"
+    echo "    - Compare commands across managers"
+    echo "    - Search for specific commands"
+    echo "    - Export cheatsheets to markdown files"
+    echo ""
+    echo -e "${BOLD}VERSION:${RESET}"
+    echo "  $SCRIPT_VERSION"
+    echo ""
+    echo -e "${BOLD}REPOSITORY:${RESET}"
+    echo "  https://github.com/RamonLiao/package-cheat"
+    echo ""
 }
 
 show_version() {
