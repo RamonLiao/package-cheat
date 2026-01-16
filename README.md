@@ -2,6 +2,8 @@
 
 An interactive bash script that detects installed package managers on macOS and provides a comprehensive command reference with cheatsheets, comparison views, search functionality, and markdown export capabilities.
 
+**Bonus**: Includes `list-all-packages.sh` - a simple standalone script to list all installed packages at once.
+
 ## Quick Start
 
 Just cloned the repo? Get started in 3 commands:
@@ -13,6 +15,8 @@ cd package-cheat
 ```
 
 That's it! The installer will guide you through the setup. Once installed, just type `pkgcheat` to launch.
+
+**Quick package listing**: Run `./list-all-packages.sh` to see all installed packages from all managers at once.
 
 ## Features
 
@@ -256,6 +260,71 @@ pkgcheat --version
 pkgcheat -v
 ```
 
+## list-all-packages.sh - Standalone Quick List Script
+
+A simple, standalone bash script that lists all installed packages from all detected package managers in one go. No installation required - just run it directly.
+
+### Features
+
+- **Zero Configuration** - Just execute the script
+- **Smart Auto-Detection** - Only lists from installed package managers
+- **Auto-Skip Missing Managers** - Gracefully skips package managers you don't have (e.g., if cargo isn't installed, it's automatically skipped)
+- **Clean Output** - Color-coded sections with version numbers
+- **No Dependencies** - Pure bash, works out of the box
+
+### Usage
+
+```bash
+# Run directly from the project directory
+./list-all-packages.sh
+
+# Or make it globally available
+sudo ln -s "$(pwd)/list-all-packages.sh" /usr/local/bin/list-all-packages
+list-all-packages
+```
+
+### What It Detects
+
+The script automatically checks for and lists packages from:
+- **JavaScript/Node.js**: npm, pnpm, yarn, bun
+- **macOS System**: brew, port
+- **Python**: pip, uv, poetry
+- **Other**: cargo (Rust), go (Go), gem (Ruby)
+
+### Example Output
+
+```bash
+$ ./list-all-packages.sh
+
+═══════════════════════════════════════════════════════════════
+  Listing All Installed Packages
+═══════════════════════════════════════════════════════════════
+
+━━━ npm (11.7.0) ━━━
+
+/Users/username/.nvm/versions/node/v24.12.0/lib
+├── corepack@0.34.5
+└── npm@11.7.0
+
+────────────────────────────────────────────────────────
+
+━━━ brew (5.0.10) ━━━
+
+uv
+antigravity-tools
+claude-code
+
+────────────────────────────────────────────────────────
+
+✓ Complete! Listed packages from 6 package manager(s)
+```
+
+### When to Use
+
+- **Quick Inventory**: See what's installed across all managers
+- **System Audit**: Check packages before/after system changes
+- **Simple Listing**: When you don't need the interactive features of pkgcheat
+
 ## Examples
 
 ### Example 1: Quick Reference for npm
@@ -389,10 +458,10 @@ Each package manager cheatsheet includes commands for:
 ```
 package-cheat/
 ├── bin/
-│   └── pkgcheat              # Main executable script
-├── install.sh                 # Automated installation script
-├── README.md                  # This file
-└── implementation_plan.md     # Development planning document
+│   └── pkgcheat                # Main interactive cheatsheet tool
+├── install.sh                   # Automated installation script for pkgcheat
+├── list-all-packages.sh         # Standalone package listing script (no install needed)
+└── README.md                    # This file
 ```
 
 ## Quick Reference Card
