@@ -113,3 +113,50 @@ SEARCH_PATH="$(cd "$SEARCH_PATH" 2>/dev/null && pwd)" || {
     exit 1
 }
 
+################################################################################
+# Search Functions
+################################################################################
+
+# Find artifacts with smart exclusions
+find_artifacts() {
+    local search_path="$1"
+    local artifact_name="$2"
+
+    # Build exclusion patterns
+    local exclusions=(
+        # System directories
+        "*/Library/*"
+        "*/Applications/*"
+        "*/System/*"
+        "*/.Trash/*"
+        # Nested artifacts (prevent duplicates)
+        "*/node_modules/*/node_modules/*"
+        "*/.venv/*/.venv/*"
+        "*/venv/*/venv/*"
+        # Hidden system folders
+        "*/.git/*"
+        "*/.cache/*"
+        "*/.npm/*"
+        "*/.local/*"
+        "*/.config/*"
+        # Common non-project directories
+        "*/Downloads/*"
+        "*/Movies/*"
+        "*/Music/*"
+        "*/Pictures/*"
+        "*/Desktop/*"
+    )
+
+    # Build find command with exclusions
+    local find_cmd="find \"$search_path\" -type d ! -type l -name \"$artifact_name\""
+
+    for excl in "${exclusions[@]}"; do
+        find_cmd="$find_cmd ! -path \"$excl\""
+    done
+
+    find_cmd="$find_cmd 2>/dev/null"
+
+    # Execute find
+    eval "$find_cmd"
+}
+
