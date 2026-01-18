@@ -789,11 +789,12 @@ show_main_menu() {
         print_color "$CYAN" "  4) Search for commands"
         print_color "$CYAN" "  5) Export cheatsheet to markdown"
         print_color "$CYAN" "  6) Help / Usage information"
-        print_color "$CYAN" "  7) List all global packages"
-        print_color "$CYAN" "  8) Exit"
+        print_color "$CYAN" "  7) Show global packages (system-wide)"
+        print_color "$CYAN" "  8) Show project artifacts (node_modules, .venv, etc.)"
+        print_color "$CYAN" "  9) Exit"
         echo ""
 
-        read -p "Enter your choice [1-8]: " choice
+        read -p "Enter your choice [1-9]: " choice
 
         case $choice in
             1)
@@ -827,6 +828,11 @@ show_main_menu() {
                 list_all_globals
                 ;;
             8)
+                # Placeholder for artifacts submenu - will be implemented in Task 4.3
+                print_color "$YELLOW" "Artifacts submenu not yet implemented"
+                sleep 1
+                ;;
+            9)
                 print_color "$GREEN" "Thank you for using pkgcheat!"
                 exit 0
                 ;;
