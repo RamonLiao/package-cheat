@@ -75,3 +75,41 @@ get_artifact_description() {
     echo "Unknown"
 }
 
+################################################################################
+# Argument Parsing
+################################################################################
+
+# Default values
+SEARCH_PATH="."
+SORT_BY="size"
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --sort=*)
+            SORT_BY="${1#*=}"
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: $0 [path] [--sort=size|path|date]"
+            echo ""
+            echo "Options:"
+            echo "  path              Directory to search (default: current directory)"
+            echo "  --sort=METHOD     Sort by: size, path, or date (default: size)"
+            echo "  --help, -h        Show this help message"
+            exit 0
+            ;;
+        *)
+            SEARCH_PATH="$1"
+            shift
+            ;;
+    esac
+done
+
+# Convert to absolute path
+SEARCH_PATH="$(cd "$SEARCH_PATH" 2>/dev/null && pwd)" || {
+    echo -e "${RED}✗ Error: Directory not found: $1${RESET}"
+    echo -e "${YELLOW}  Please check the path and try again${RESET}"
+    exit 1
+}
+
