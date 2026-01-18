@@ -776,6 +776,78 @@ export_single_manager_md() {
 # Interactive Menu
 ################################################################################
 
+# Helper function to wait for user input
+press_any_key() {
+    echo ""
+    echo "Press any key to continue..."
+    read -n 1 -s
+}
+
+################################################################################
+# Artifacts Submenu
+################################################################################
+
+show_artifacts_menu() {
+    local search_path="${1:-.}"
+
+    while true; do
+        clear
+        echo -e "${BOLD}${CYAN}════════════════════════════════════════════════════════${RESET}"
+        echo -e "${BOLD}${CYAN}  Project Artifacts${RESET}"
+        echo -e "${BOLD}${CYAN}════════════════════════════════════════════════════════${RESET}"
+        echo ""
+        echo -e "Search path: ${GREEN}$search_path${RESET}"
+        echo ""
+        echo "1) List all artifacts"
+        echo "2) List node_modules only"
+        echo "3) List Python virtual environments only"
+        echo "4) Configure artifact types"
+        echo "5) Change search path"
+        echo "6) Back to main menu"
+        echo ""
+        echo -n "Select option: "
+        read -r choice
+
+        case $choice in
+            1)
+                run_artifacts_all "$search_path"
+                press_any_key
+                ;;
+            2)
+                run_artifacts_node "$search_path"
+                press_any_key
+                ;;
+            3)
+                run_artifacts_python "$search_path"
+                press_any_key
+                ;;
+            4)
+                # Placeholder for configuration UI - will be implemented in Task 4.4
+                print_color "$YELLOW" "Configuration UI not yet implemented"
+                sleep 1
+                ;;
+            5)
+                echo -n "Enter new search path: "
+                read -r new_path
+                if [[ -d "$new_path" ]]; then
+                    search_path="$(cd "$new_path" && pwd)"
+                    echo -e "${GREEN}✓ Search path updated${RESET}"
+                else
+                    echo -e "${RED}✗ Invalid path${RESET}"
+                fi
+                sleep 1
+                ;;
+            6)
+                return
+                ;;
+            *)
+                echo -e "${RED}Invalid option${RESET}"
+                sleep 1
+                ;;
+        esac
+    done
+}
+
 show_main_menu() {
     while true; do
         clear
@@ -828,9 +900,7 @@ show_main_menu() {
                 list_all_globals
                 ;;
             8)
-                # Placeholder for artifacts submenu - will be implemented in Task 4.3
-                print_color "$YELLOW" "Artifacts submenu not yet implemented"
-                sleep 1
+                show_artifacts_menu "."
                 ;;
             9)
                 print_color "$GREEN" "Thank you for using pkgcheat!"
