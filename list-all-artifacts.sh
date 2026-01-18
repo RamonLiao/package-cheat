@@ -339,6 +339,13 @@ display_results() {
     total_size=$(calculate_total_size "${all_paths[@]}")
     echo -e "${BOLD}${GREEN}✓ Complete! Found $FOUND_COUNT artifacts using $total_size total${RESET}"
     echo ""
+
+    # Display permission warnings if any
+    if [[ $PERMISSION_ERRORS -gt 0 ]]; then
+        echo -e "${YELLOW}⚠ Warning: $PERMISSION_ERRORS directories were not accessible (permission denied)${RESET}"
+        echo -e "${YELLOW}  Results may be incomplete${RESET}"
+        echo ""
+    fi
 }
 
 # Display a single artifact type group
@@ -366,6 +373,9 @@ display_artifact_type() {
     echo -e "${GREEN}────────────────────────────────────────────────────────${RESET}"
     echo ""
 }
+
+# Global error tracking
+PERMISSION_ERRORS=0
 
 ################################################################################
 # Main Execution
