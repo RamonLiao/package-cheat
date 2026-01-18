@@ -129,6 +129,11 @@ chmod +x bin/pkgcheat
 which npm pnpm yarn brew pip
 ```
 
+## Future Outlook
+More functions to be added:
+-  Listing all node_modules
+-  Listing all .venv
+
 ## License
 
 MIT License
