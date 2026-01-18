@@ -784,6 +784,145 @@ press_any_key() {
 }
 
 ################################################################################
+# Configuration UI
+################################################################################
+
+# Helper: Display checkbox
+checkbox() {
+    local value="$1"
+    if [[ "$value" == "enabled" ]]; then
+        echo "✓"
+    else
+        echo " "
+    fi
+}
+
+configure_artifacts() {
+    local config_file="$HOME/.pkgcheat/artifacts.conf"
+
+    # Load current config using simple variables (Bash 3.2 compatible)
+    local cfg_node_modules="enabled"
+    local cfg_venv_dot="enabled"
+    local cfg_venv="enabled"
+    local cfg_env="disabled"
+    local cfg_virtualenv="disabled"
+    local cfg_vendor="disabled"
+    local cfg_target="disabled"
+    local cfg_sort_by="size"
+
+    if [[ -f "$config_file" ]]; then
+        while IFS='=' read -r key value; do
+            [[ "$key" =~ ^#.*$ ]] && continue
+            [[ -z "$key" ]] && continue
+            case "$key" in
+                node_modules) cfg_node_modules="$value" ;;
+                .venv) cfg_venv_dot="$value" ;;
+                venv) cfg_venv="$value" ;;
+                env) cfg_env="$value" ;;
+                .virtualenv) cfg_virtualenv="$value" ;;
+                vendor) cfg_vendor="$value" ;;
+                target) cfg_target="$value" ;;
+                sort_by) cfg_sort_by="$value" ;;
+            esac
+        done < <(grep -v '^\[' "$config_file" | grep -v '^$' | grep -v '^#')
+    fi
+
+    while true; do
+        clear
+        echo -e "${BOLD}${CYAN}════════════════════════════════════════════════════════${RESET}"
+        echo -e "${BOLD}${CYAN}  Configure Artifact Types${RESET}"
+        echo -e "${BOLD}${CYAN}════════════════════════════════════════════════════════${RESET}"
+        echo ""
+
+        echo -e "${BOLD}JavaScript:${RESET}"
+        echo "  1) [$(checkbox $cfg_node_modules)] node_modules"
+        echo ""
+
+        echo -e "${BOLD}Python:${RESET}"
+        echo "  2) [$(checkbox $cfg_venv_dot)] .venv"
+        echo "  3) [$(checkbox $cfg_venv)] venv"
+        echo "  4) [$(checkbox $cfg_env)] env"
+        echo "  5) [$(checkbox $cfg_virtualenv)] .virtualenv"
+        echo ""
+
+        echo -e "${BOLD}Other Languages:${RESET}"
+        echo "  6) [$(checkbox $cfg_vendor)] vendor (PHP/Ruby)"
+        echo "  7) [$(checkbox $cfg_target)] target (Rust)"
+        echo ""
+
+        echo -e "${BOLD}Preferences:${RESET}"
+        echo "  Sort by: $cfg_sort_by"
+        echo ""
+
+        echo "Commands:"
+        echo "  1-7) Toggle item"
+        echo "  s) Change sort preference"
+        echo "  r) Reset to defaults"
+        echo "  d) Done (save and exit)"
+        echo ""
+        echo -n "Select option: "
+        read -r choice
+
+        case $choice in
+            1) [[ "$cfg_node_modules" == "enabled" ]] && cfg_node_modules="disabled" || cfg_node_modules="enabled" ;;
+            2) [[ "$cfg_venv_dot" == "enabled" ]] && cfg_venv_dot="disabled" || cfg_venv_dot="enabled" ;;
+            3) [[ "$cfg_venv" == "enabled" ]] && cfg_venv="disabled" || cfg_venv="enabled" ;;
+            4) [[ "$cfg_env" == "enabled" ]] && cfg_env="disabled" || cfg_env="enabled" ;;
+            5) [[ "$cfg_virtualenv" == "enabled" ]] && cfg_virtualenv="disabled" || cfg_virtualenv="enabled" ;;
+            6) [[ "$cfg_vendor" == "enabled" ]] && cfg_vendor="disabled" || cfg_vendor="enabled" ;;
+            7) [[ "$cfg_target" == "enabled" ]] && cfg_target="disabled" || cfg_target="enabled" ;;
+            s|S)
+                echo "Sort by: (s)ize, (p)ath, (d)ate"
+                read -r sort_choice
+                case $sort_choice in
+                    s|S) cfg_sort_by="size" ;;
+                    p|P) cfg_sort_by="path" ;;
+                    d|D) cfg_sort_by="date" ;;
+                esac
+                ;;
+            r|R)
+                echo "Reset to defaults? (y/n)"
+                read -r confirm
+                if [[ "$confirm" == "y" ]]; then
+                    cfg_node_modules="enabled"
+                    cfg_venv_dot="enabled"
+                    cfg_venv="enabled"
+                    cfg_env="disabled"
+                    cfg_virtualenv="disabled"
+                    cfg_vendor="disabled"
+                    cfg_target="disabled"
+                    cfg_sort_by="size"
+                fi
+                ;;
+            d|D)
+                # Save config
+                mkdir -p "$(dirname "$config_file")"
+                cat > "$config_file" << EOF
+# pkgcheat artifact configuration
+# Enable/disable artifact types and set preferences
+
+[artifacts]
+node_modules=$cfg_node_modules
+.venv=$cfg_venv_dot
+venv=$cfg_venv
+env=$cfg_env
+.virtualenv=$cfg_virtualenv
+vendor=$cfg_vendor
+target=$cfg_target
+
+[preferences]
+sort_by=$cfg_sort_by
+# Options: size, path, date
+EOF
+                echo -e "${GREEN}✓ Configuration saved${RESET}"
+                sleep 1
+                return
+                ;;
+        esac
+    done
+}
+
+################################################################################
 # Artifacts Submenu
 ################################################################################
 
@@ -822,9 +961,7 @@ show_artifacts_menu() {
                 press_any_key
                 ;;
             4)
-                # Placeholder for configuration UI - will be implemented in Task 4.4
-                print_color "$YELLOW" "Configuration UI not yet implemented"
-                sleep 1
+                configure_artifacts
                 ;;
             5)
                 echo -n "Enter new search path: "
