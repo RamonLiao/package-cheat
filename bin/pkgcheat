@@ -979,6 +979,11 @@ show_help() {
     echo "  -s, --search KEYWORD    Search for commands across all managers"
     echo "  -c, --compare           Compare equivalent commands across JS managers"
     echo ""
+    echo -e "${BOLD}ARTIFACT MANAGEMENT:${RESET}"
+    echo "  --artifacts [PATH]      List all project artifacts (node_modules, .venv, etc.)"
+    echo "  --artifacts-node [PATH] List node_modules directories only"
+    echo "  --artifacts-python [PATH] List Python virtual environments only"
+    echo ""
     echo -e "${BOLD}EXAMPLES:${RESET}"
     echo "  pkgcheat                # Launch interactive mode"
     echo "  pkgcheat npm            # Show npm cheatsheet directly"
@@ -987,6 +992,9 @@ show_help() {
     echo "  pkgcheat -e npm         # Export npm cheatsheet to markdown"
     echo "  pkgcheat -e all         # Export all detected managers to markdown"
     echo "  pkgcheat -c             # Show command comparison"
+    echo "  pkgcheat --artifacts .  # List all artifacts in current directory"
+    echo "  pkgcheat --artifacts-node ~/Projects  # List node_modules in ~/Projects"
+    echo "  pkgcheat --artifacts-python .         # List Python venvs in current directory"
     echo ""
     echo -e "${BOLD}SUPPORTED PACKAGE MANAGERS:${RESET}"
     echo "  JavaScript/Node.js:  npm, pnpm, yarn, bun"
@@ -1041,6 +1049,29 @@ show_all_managers() {
     done
 
     echo ""
+}
+
+################################################################################
+# Artifact Discovery Functions
+################################################################################
+
+# Get script directory for calling standalone scripts
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Run artifacts scripts
+run_artifacts_all() {
+    local path="${1:-.}"
+    "${SCRIPT_DIR}/../list-all-artifacts.sh" "$path"
+}
+
+run_artifacts_node() {
+    local path="${1:-.}"
+    "${SCRIPT_DIR}/../list-node-modules.sh" "$path"
+}
+
+run_artifacts_python() {
+    local path="${1:-.}"
+    "${SCRIPT_DIR}/../list-python-venvs.sh" "$path"
 }
 
 ################################################################################
@@ -1102,6 +1133,18 @@ main() {
                 5) display_comparison "cache_clean" ;;
                 *) print_color "$RED" "Invalid choice" ; exit 1 ;;
             esac
+            ;;
+        --artifacts)
+            ARTIFACTS_PATH="${2:-.}"
+            run_artifacts_all "$ARTIFACTS_PATH"
+            ;;
+        --artifacts-node)
+            ARTIFACTS_PATH="${2:-.}"
+            run_artifacts_node "$ARTIFACTS_PATH"
+            ;;
+        --artifacts-python)
+            ARTIFACTS_PATH="${2:-.}"
+            run_artifacts_python "$ARTIFACTS_PATH"
             ;;
         *)
             # Assume it's a package manager name
