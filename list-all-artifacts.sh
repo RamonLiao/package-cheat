@@ -160,3 +160,36 @@ find_artifacts() {
     eval "$find_cmd"
 }
 
+# Calculate size of directory
+calculate_size() {
+    local dir_path="$1"
+    local size
+
+    size=$(du -sh "$dir_path" 2>/dev/null | cut -f1)
+
+    if [[ -z "$size" ]]; then
+        size="unavailable"
+    fi
+
+    echo "$size"
+}
+
+# Calculate total size from multiple directories
+calculate_total_size() {
+    local dirs=("$@")
+    local total
+
+    if [[ ${#dirs[@]} -eq 0 ]]; then
+        echo "0B"
+        return
+    fi
+
+    total=$(du -shc "${dirs[@]}" 2>/dev/null | tail -1 | cut -f1)
+
+    if [[ -z "$total" ]]; then
+        echo "unavailable"
+    else
+        echo "$total"
+    fi
+}
+
