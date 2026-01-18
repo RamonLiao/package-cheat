@@ -26,6 +26,10 @@ RESET='\033[0m'
 # Version
 SCRIPT_VERSION="1.0.0"
 
+# Configuration
+CONFIG_DIR="$HOME/.pkgcheat"
+CONFIG_FILE="$CONFIG_DIR/artifacts.conf"
+
 ################################################################################
 # Artifact Type Definitions
 ################################################################################
@@ -234,6 +238,96 @@ handle_interrupt() {
 
 trap 'handle_interrupt' INT
 
+################################################################################
+# Configuration Management
+################################################################################
+
+# Create default configuration file
+create_default_config() {
+    mkdir -p "$CONFIG_DIR"
+
+    cat > "$CONFIG_FILE" << 'EOF'
+# pkgcheat artifact configuration
+# Enable/disable artifact types and set preferences
+
+[artifacts]
+node_modules=enabled
+.venv=enabled
+venv=enabled
+env=disabled
+.virtualenv=disabled
+vendor=disabled
+target=disabled
+
+[preferences]
+sort_by=size
+# Options: size, path, date
+EOF
+}
+
+# Load configuration file
+load_config() {
+    # Create if doesn't exist
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        create_default_config
+    fi
+
+    # Parse INI-style config
+    local section=""
+    while IFS= read -r line; do
+        # Skip comments and empty lines
+        [[ "$line" =~ ^#.*$ ]] && continue
+        [[ -z "$line" ]] && continue
+
+        # Parse section headers
+        if [[ "$line" =~ ^\[(.+)\]$ ]]; then
+            section="${BASH_REMATCH[1]}"
+            continue
+        fi
+
+        # Parse key=value pairs
+        if [[ "$line" =~ ^([^=]+)=(.+)$ ]]; then
+            local key="${BASH_REMATCH[1]}"
+            local value="${BASH_REMATCH[2]}"
+
+            case "$section" in
+                artifacts)
+                    # Update enabled/disabled status
+                    if [[ "$value" == "enabled" ]]; then
+                        # Check if it's in disabled list and move it
+                        for i in "${!DISABLED_ARTIFACT_NAMES[@]}"; do
+                            if [[ "${DISABLED_ARTIFACT_NAMES[$i]}" == "$key" ]]; then
+                                ENABLED_ARTIFACT_NAMES+=("$key")
+                                ENABLED_ARTIFACT_DESCS+=("${DISABLED_ARTIFACT_DESCS[$i]}")
+                            fi
+                        done
+                    elif [[ "$value" == "disabled" ]]; then
+                        # Remove from enabled list if present
+                        local new_enabled_names=()
+                        local new_enabled_descs=()
+                        for i in "${!ENABLED_ARTIFACT_NAMES[@]}"; do
+                            if [[ "${ENABLED_ARTIFACT_NAMES[$i]}" != "$key" ]]; then
+                                new_enabled_names+=("${ENABLED_ARTIFACT_NAMES[$i]}")
+                                new_enabled_descs+=("${ENABLED_ARTIFACT_DESCS[$i]}")
+                            fi
+                        done
+                        ENABLED_ARTIFACT_NAMES=("${new_enabled_names[@]}")
+                        ENABLED_ARTIFACT_DESCS=("${new_enabled_descs[@]}")
+                    fi
+                    ;;
+                preferences)
+                    if [[ "$key" == "sort_by" ]]; then
+                        SORT_BY="$value"
+                    fi
+                    ;;
+            esac
+        fi
+    done < "$CONFIG_FILE"
+
+    # Validate loaded config
+    validate_sort_method
+}
+
 # Validate and set sort method
 validate_sort_method() {
     if [[ ! "$SORT_BY" =~ ^(size|path|date)$ ]]; then
@@ -382,6 +476,7 @@ PERMISSION_ERRORS=0
 ################################################################################
 
 main() {
+    load_config
     validate_sort_method
     search_all_artifacts "$SEARCH_PATH"
 }
