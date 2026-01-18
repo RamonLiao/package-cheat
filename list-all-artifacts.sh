@@ -193,3 +193,44 @@ calculate_total_size() {
     fi
 }
 
+# Global progress tracking
+FOUND_COUNT=0
+LONG_SEARCH_WARNED=false
+SEARCH_START_TIME=0
+
+# Show progress during search
+show_progress() {
+    local count="$1"
+    echo -ne "\r${CYAN}Found: $count artifacts...${RESET}                    "
+}
+
+# Clear progress line
+clear_progress() {
+    echo -ne "\r${GREEN}✓ Search complete${RESET}                              \n"
+}
+
+# Check if search is taking too long
+check_search_time() {
+    local elapsed=$(($(date +%s) - SEARCH_START_TIME))
+
+    if [[ $elapsed -gt 10 ]] && [[ "$LONG_SEARCH_WARNED" == "false" ]]; then
+        echo -e "\n${YELLOW}Searching large directory tree. This may take a few minutes...${RESET}"
+        LONG_SEARCH_WARNED=true
+    fi
+}
+
+# Handle Ctrl+C gracefully
+handle_interrupt() {
+    echo -e "\n${YELLOW}⚠ Search interrupted by user${RESET}"
+
+    if [[ $FOUND_COUNT -gt 0 ]]; then
+        echo -e "${YELLOW}Showing partial results ($FOUND_COUNT artifacts found so far)...${RESET}"
+        echo ""
+        # Will display results before exit
+    fi
+
+    exit 130
+}
+
+trap 'handle_interrupt' INT
+
