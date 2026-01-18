@@ -242,3 +242,139 @@ validate_sort_method() {
     fi
 }
 
+################################################################################
+# Main Search Logic
+################################################################################
+
+# Search for all enabled artifacts
+search_all_artifacts() {
+    local search_path="$1"
+
+    # Arrays to store results (indexed arrays for Bash 3.2)
+    local artifact_paths=()
+    local artifact_types=()
+    local artifact_counts=()
+
+    echo -e "${BOLD}${CYAN}═══════════════════════════════════════════════════════════════${RESET}"
+    echo -e "${BOLD}${CYAN}  Project Artifacts in $search_path${RESET}"
+    echo -e "${BOLD}${CYAN}═══════════════════════════════════════════════════════════════${RESET}"
+    echo ""
+
+    echo -e "${YELLOW}🔍 Searching for artifacts in $search_path...${RESET}"
+
+    SEARCH_START_TIME=$(date +%s)
+
+    # Search for each enabled artifact type
+    while IFS= read -r artifact_name; do
+        [[ -z "$artifact_name" ]] && continue
+
+        local type_paths=()
+
+        while IFS= read -r artifact_path; do
+            [[ -z "$artifact_path" ]] && continue
+
+            artifact_paths+=("$artifact_path")
+            artifact_types+=("$artifact_name")
+            type_paths+=("$artifact_path")
+            ((FOUND_COUNT++))
+            show_progress $FOUND_COUNT
+            check_search_time
+
+        done < <(find_artifacts "$search_path" "$artifact_name")
+
+        if [[ ${#type_paths[@]} -gt 0 ]]; then
+            artifact_counts+=("${#type_paths[@]}")
+        fi
+    done < <(get_enabled_artifacts)
+
+    clear_progress
+    echo ""
+
+    # Check if any artifacts found
+    if [[ $FOUND_COUNT -eq 0 ]]; then
+        echo -e "${YELLOW}⚠ No artifacts found in $search_path${RESET}"
+        echo ""
+        echo "Try:"
+        echo "  • Searching a different directory"
+        echo "  • Enabling more artifact types"
+        echo ""
+        exit 0
+    fi
+
+    # Display results
+    display_results "$search_path"
+}
+
+# Display formatted results
+display_results() {
+    local search_path="$1"
+    local total_size="0B"
+    local all_paths=()
+
+    # Group by artifact type
+    local current_type=""
+    local type_paths=()
+
+    for i in "${!artifact_paths[@]}"; do
+        local path="${artifact_paths[$i]}"
+        local type="${artifact_types[$i]}"
+
+        # If we hit a new type, display previous type
+        if [[ -n "$current_type" ]] && [[ "$type" != "$current_type" ]]; then
+            display_artifact_type "$current_type" "${type_paths[@]}"
+            type_paths=()
+        fi
+
+        type_paths+=("$path")
+        all_paths+=("$path")
+        current_type="$type"
+    done
+
+    # Display last type
+    if [[ -n "$current_type" ]]; then
+        display_artifact_type "$current_type" "${type_paths[@]}"
+    fi
+
+    # Calculate and display total
+    total_size=$(calculate_total_size "${all_paths[@]}")
+    echo -e "${BOLD}${GREEN}✓ Complete! Found $FOUND_COUNT artifacts using $total_size total${RESET}"
+    echo ""
+}
+
+# Display a single artifact type group
+display_artifact_type() {
+    local artifact_name="$1"
+    shift
+    local paths=("$@")
+    local count=${#paths[@]}
+
+    # Calculate total size for this type
+    local type_total=$(calculate_total_size "${paths[@]}")
+
+    # Display header
+    local description=$(get_artifact_description "$artifact_name")
+    echo -e "${BOLD}${CYAN}━━━ $artifact_name - $description ($count found, $type_total total) ━━━${RESET}"
+    echo ""
+
+    # Display each path with size
+    for path in "${paths[@]}"; do
+        local size=$(calculate_size "$path")
+        printf "%-70s ${GREEN}(%s)${RESET}\n" "$path" "$size"
+    done
+
+    echo ""
+    echo -e "${GREEN}────────────────────────────────────────────────────────${RESET}"
+    echo ""
+}
+
+################################################################################
+# Main Execution
+################################################################################
+
+main() {
+    validate_sort_method
+    search_all_artifacts "$SEARCH_PATH"
+}
+
+main
+
