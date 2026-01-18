@@ -13,3 +13,6 @@
 
 # User-specific files
 *.local
+
+# Git worktrees
+.worktrees/
