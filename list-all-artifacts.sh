@@ -234,3 +234,11 @@ handle_interrupt() {
 
 trap 'handle_interrupt' INT
 
+# Validate and set sort method
+validate_sort_method() {
+    if [[ ! "$SORT_BY" =~ ^(size|path|date)$ ]]; then
+        echo -e "${YELLOW}Warning: Invalid sort method '$SORT_BY', using 'size'${RESET}"
+        SORT_BY="size"
+    fi
+}
+
