@@ -67,6 +67,8 @@ pkgcheat --help             # Show all options
 
 Find project dependencies and virtual environments across your filesystem.
 
+**New in v2.0**: Smart artifact search with project-aware detection and monorepo grouping!
+
 **Interactive Mode:**
 ```bash
 pkgcheat
@@ -75,16 +77,49 @@ pkgcheat
 
 **Command Line:**
 ```bash
-pkgcheat -a [path]           # List all artifacts
+pkgcheat -a [path]           # List all artifacts (smart mode)
 pkgcheat -a-node [path]      # List node_modules only
 pkgcheat -a-python [path]    # List Python venvs only
 ```
 
 **Standalone Scripts:**
 ```bash
-./list-all-artifacts.sh ~/Projects
+./list-all-artifacts.sh ~/Projects                  # Smart search with monorepo detection
+./list-all-artifacts.sh ~/Projects --legacy-mode    # v1.0 behavior
+./list-all-artifacts.sh ~/Projects --verbose        # Show detailed progress
 ./list-node-modules.sh ~/Projects
 ./list-python-venvs.sh ~/Projects
+```
+
+**V2.0 Features:**
+
+**Smart Search** (default):
+- Project-aware: Only shows artifacts that match their project type (e.g., node_modules only in JavaScript projects)
+- Monorepo detection: Automatically detects and groups artifacts by monorepo workspace
+- Intelligent pruning: Stops searching at artifact boundaries for better performance
+
+**Monorepo Support:**
+Automatically detects and groups artifacts in monorepos:
+- npm workspaces
+- pnpm workspaces
+- lerna
+- nx
+- turborepo
+
+Example output for monorepos:
+```
+Monorepo: /path/to/monorepo (5 artifacts, 2.3GB)
+  ├─ /path/to/monorepo/node_modules (1.2GB)
+  ├─ /path/to/monorepo/packages/app1/node_modules (500MB)
+  └─ /path/to/monorepo/packages/app2/node_modules (600MB)
+```
+
+**CLI Flags:**
+```bash
+--legacy-mode           # Use v1.0 behavior (no project detection or monorepo grouping)
+--verbose, -v           # Show detailed search progress and diagnostics
+--follow-symlinks       # Follow symbolic links during search
+--sort=METHOD           # Sort by: size, path, or date
 ```
 
 **Configuration:**
@@ -118,6 +153,18 @@ Quick inventory of current project:
 ```bash
 cd my-project
 pkgcheat -a .
+```
+
+Use legacy mode for simple flat list:
+```bash
+./list-all-artifacts.sh ~/Projects --legacy-mode
+```
+
+Export results to Excel:
+```bash
+./list-all-artifacts.sh ~/Projects
+# Prompts: "Export results to Excel? [y/N]:"
+# Creates: ./artifacts-2026-01-19.xlsx
 ```
 
 ## list-all-packages.sh

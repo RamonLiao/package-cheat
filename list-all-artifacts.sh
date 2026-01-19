@@ -24,7 +24,13 @@ BOLD='\033[1m'
 RESET='\033[0m'
 
 # Version
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="2.0.0"
+
+# Source shared libraries
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/artifact-search-core.sh"
+source "$SCRIPT_DIR/lib/monorepo-handler.sh"
+source "$SCRIPT_DIR/lib/excel-export.sh"
 
 # Configuration
 CONFIG_DIR="$HOME/.pkgcheat"
@@ -86,6 +92,9 @@ get_artifact_description() {
 # Default values
 SEARCH_PATH="."
 SORT_BY="size"
+LEGACY_MODE=false
+VERBOSE=false
+FOLLOW_SYMLINKS=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -94,13 +103,36 @@ while [[ $# -gt 0 ]]; do
             SORT_BY="${1#*=}"
             shift
             ;;
+        --legacy-mode)
+            LEGACY_MODE=true
+            shift
+            ;;
+        --verbose|-v)
+            VERBOSE=true
+            shift
+            ;;
+        --follow-symlinks)
+            FOLLOW_SYMLINKS=true
+            shift
+            ;;
         --help|-h)
-            echo "Usage: $0 [path] [--sort=size|path|date]"
+            echo "Usage: $0 [path] [OPTIONS]"
+            echo ""
+            echo "Arguments:"
+            echo "  path                    Directory to search (default: current directory)"
             echo ""
             echo "Options:"
-            echo "  path              Directory to search (default: current directory)"
-            echo "  --sort=METHOD     Sort by: size, path, or date (default: size)"
-            echo "  --help, -h        Show this help message"
+            echo "  --sort=METHOD           Sort by: size, path, or date (default: size)"
+            echo "  --legacy-mode           Use v1.0 behavior (no project detection or monorepo grouping)"
+            echo "  --verbose, -v           Show detailed search progress and diagnostics"
+            echo "  --follow-symlinks       Follow symbolic links during search"
+            echo "  --help, -h              Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  $0                      # Search current directory"
+            echo "  $0 ~/projects           # Search specific directory"
+            echo "  $0 --legacy-mode        # Use v1.0 behavior"
+            echo "  $0 --verbose ~/code     # Verbose output"
             exit 0
             ;;
         *)
@@ -152,7 +184,14 @@ find_artifacts() {
     )
 
     # Build find command with exclusions
-    local find_cmd="find \"$search_path\" -type d ! -type l -name \"$artifact_name\""
+    local find_cmd="find \"$search_path\" -type d"
+
+    # Only exclude symlinks if not following them
+    if [[ "$FOLLOW_SYMLINKS" != "true" ]]; then
+        find_cmd="$find_cmd ! -type l"
+    fi
+
+    find_cmd="$find_cmd -name \"$artifact_name\""
 
     for excl in "${exclusions[@]}"; do
         find_cmd="$find_cmd ! -path \"$excl\""
@@ -348,41 +387,117 @@ artifact_types=()
 search_all_artifacts() {
     local search_path="$1"
 
-    # Reset global arrays
+    # Reset global arrays (both old and new format)
     artifact_paths=()
     artifact_types=()
+    ARTIFACT_PATHS=()
+    ARTIFACT_TYPES=()
+    ARTIFACT_PROJECTS=()
 
     echo -e "${BOLD}${CYAN}═══════════════════════════════════════════════════════════════${RESET}"
     echo -e "${BOLD}${CYAN}  Project Artifacts in $search_path${RESET}"
     echo -e "${BOLD}${CYAN}═══════════════════════════════════════════════════════════════${RESET}"
     echo ""
 
+    # Show mode indicator if not default
+    if [[ "$LEGACY_MODE" == "true" ]]; then
+        echo -e "${YELLOW}⚙  Legacy Mode (v1.0 behavior)${RESET}"
+    fi
+    if [[ "$VERBOSE" == "true" ]]; then
+        echo -e "${YELLOW}⚙  Verbose Mode${RESET}"
+    fi
+    if [[ "$FOLLOW_SYMLINKS" == "true" ]]; then
+        echo -e "${YELLOW}⚙  Following symbolic links${RESET}"
+    fi
+
     echo -e "${YELLOW}🔍 Searching for artifacts in $search_path...${RESET}"
 
     SEARCH_START_TIME=$(date +%s)
 
-    # Search for each enabled artifact type
-    while IFS= read -r artifact_name; do
-        [[ -z "$artifact_name" ]] && continue
-
-        local type_paths=()
-
-        while IFS= read -r artifact_path; do
-            [[ -z "$artifact_path" ]] && continue
-
-            artifact_paths+=("$artifact_path")
-            artifact_types+=("$artifact_name")
-            type_paths+=("$artifact_path")
-            ((FOUND_COUNT++))
-            show_progress $FOUND_COUNT
-            check_search_time
-
-        done < <(find_artifacts "$search_path" "$artifact_name")
-
-        if [[ ${#type_paths[@]} -gt 0 ]]; then
-            artifact_counts+=("${#type_paths[@]}")
+    # Use legacy mode if requested
+    if [[ "$LEGACY_MODE" == "true" ]]; then
+        # V1.0 behavior: simple search without project detection
+        if [[ "$VERBOSE" == "true" ]]; then
+            echo -e "${CYAN}[VERBOSE] Using legacy search (v1.0)${RESET}"
         fi
-    done < <(get_enabled_artifacts)
+
+        while IFS= read -r artifact_name; do
+            [[ -z "$artifact_name" ]] && continue
+
+            if [[ "$VERBOSE" == "true" ]]; then
+                echo -e "${CYAN}[VERBOSE] Searching for: $artifact_name${RESET}"
+            fi
+
+            while IFS= read -r artifact_path; do
+                [[ -z "$artifact_path" ]] && continue
+
+                artifact_paths+=("$artifact_path")
+                artifact_types+=("$artifact_name")
+                ((FOUND_COUNT++))
+                show_progress $FOUND_COUNT
+                check_search_time
+
+                if [[ "$VERBOSE" == "true" ]]; then
+                    echo -e "\n${CYAN}[VERBOSE] Found: $artifact_path${RESET}"
+                fi
+            done < <(find_artifacts "$search_path" "$artifact_name")
+        done < <(get_enabled_artifacts)
+
+        # Copy to uppercase arrays for compatibility
+        ARTIFACT_PATHS=("${artifact_paths[@]}")
+        ARTIFACT_TYPES=("${artifact_types[@]}")
+    else
+        # V2.0 behavior: project-aware search with monorepo detection
+        if [[ "$VERBOSE" == "true" ]]; then
+            echo -e "${CYAN}[VERBOSE] Using smart search (v2.0 with project detection)${RESET}"
+        fi
+
+        # Determine which artifact types to search for
+        local search_node=false
+        local search_python=false
+
+        while IFS= read -r artifact_name; do
+            [[ -z "$artifact_name" ]] && continue
+
+            # Map artifact names to types
+            case "$artifact_name" in
+                node_modules|bower_components|.pnpm-store)
+                    search_node=true
+                    ;;
+                .venv|venv|env|.virtualenv)
+                    search_python=true
+                    ;;
+            esac
+        done < <(get_enabled_artifacts)
+
+        # Search for Node artifacts
+        if [[ "$search_node" == "true" ]]; then
+            if [[ "$VERBOSE" == "true" ]]; then
+                echo -e "${CYAN}[VERBOSE] Searching for Node.js artifacts with project validation${RESET}"
+            fi
+            search_artifacts_by_type "$search_path" "node" > /dev/null
+        fi
+
+        # Search for Python artifacts
+        if [[ "$search_python" == "true" ]]; then
+            if [[ "$VERBOSE" == "true" ]]; then
+                echo -e "${CYAN}[VERBOSE] Searching for Python artifacts with project validation${RESET}"
+            fi
+            search_artifacts_by_type "$search_path" "python" > /dev/null
+        fi
+
+        # Update FOUND_COUNT from actual results
+        FOUND_COUNT=${#ARTIFACT_PATHS[@]}
+
+        # Populate old arrays for compatibility
+        artifact_paths=("${ARTIFACT_PATHS[@]}")
+        artifact_types=("${ARTIFACT_TYPES[@]}")
+
+        if [[ "$VERBOSE" == "true" ]]; then
+            echo -e "${CYAN}[VERBOSE] Found ${FOUND_COUNT} artifacts after project validation${RESET}"
+            echo -e "${CYAN}[VERBOSE] Grouping artifacts by monorepo...${RESET}"
+        fi
+    fi
 
     clear_progress
     echo ""
@@ -402,39 +517,88 @@ search_all_artifacts() {
     display_results "$search_path"
 }
 
-# Display formatted results
+# Display formatted results with monorepo grouping
 display_results() {
     local search_path="$1"
     local total_size="0B"
     local all_paths=()
 
-    # Group by artifact type
-    local current_type=""
-    local type_paths=()
+    # Skip monorepo grouping in legacy mode
+    if [[ "$LEGACY_MODE" == "true" ]]; then
+        # Legacy mode: simple list without grouping
+        echo -e "${BOLD}${CYAN}━━━ Artifacts Found ━━━${RESET}"
+        echo ""
 
-    for i in "${!artifact_paths[@]}"; do
-        local path="${artifact_paths[$i]}"
-        local type="${artifact_types[$i]}"
+        local i
+        for i in "${!artifact_paths[@]}"; do
+            local path="${artifact_paths[$i]}"
+            local size=$(calculate_size "$path")
+            printf "%-70s ${GREEN}(%s)${RESET}\\n" "$path" "$size"
+            all_paths+=("$path")
+        done
 
-        # If we hit a new type, display previous type
-        if [[ -n "$current_type" ]] && [[ "$type" != "$current_type" ]]; then
-            display_artifact_type "$current_type" "${type_paths[@]}"
-            type_paths=()
-        fi
+        echo ""
 
-        type_paths+=("$path")
-        all_paths+=("$path")
-        current_type="$type"
-    done
-
-    # Display last type
-    if [[ -n "$current_type" ]]; then
-        display_artifact_type "$current_type" "${type_paths[@]}"
+        # Calculate and display total
+        total_size=$(calculate_total_size "${all_paths[@]}")
+        echo -e "${BOLD}${GREEN}✓ Complete! Found ${#all_paths[@]} artifacts using $total_size total${RESET}"
+        echo ""
+        return
     fi
 
+    # V2.0: Group artifacts by monorepo
+    if [[ "$VERBOSE" == "true" ]]; then
+        echo -e "${CYAN}[VERBOSE] Detecting monorepos...${RESET}"
+    fi
+
+    group_artifacts_by_monorepo
+
+    # Track which artifacts are displayed as part of monorepo
+    local displayed_artifacts=()
+
+    # Display monorepos first
+    if [[ ${#MONOREPO_ROOTS[@]} -gt 0 ]]; then
+        if [[ "$VERBOSE" == "true" ]]; then
+            echo -e "${CYAN}[VERBOSE] Found ${#MONOREPO_ROOTS[@]} monorepo(s)${RESET}"
+        fi
+
+        local i
+        for i in "${!MONOREPO_ROOTS[@]}"; do
+            local mono_root="${MONOREPO_ROOTS[$i]}"
+            local mono_artifacts="${MONOREPO_ARTIFACTS[$i]}"
+
+            format_monorepo "$mono_root" "$mono_artifacts"
+
+            # Mark these artifacts as displayed
+            IFS=',' read -ra arts <<< "$mono_artifacts"
+            displayed_artifacts+=("${arts[@]}")
+        done
+    fi
+
+    # Display standalone artifacts (not in monorepos)
+    echo -e "${BOLD}${CYAN}━━━ Standalone Projects ━━━${RESET}"
+    echo ""
+
+    local i
+    for i in "${!artifact_paths[@]}"; do
+        local path="${artifact_paths[$i]}"
+
+        # Skip if already displayed in monorepo
+        if [[ " ${displayed_artifacts[@]} " =~ " ${path} " ]]; then
+            continue
+        fi
+
+        local size=$(calculate_size "$path")
+        printf "%-70s ${GREEN}(%s)${RESET}\\n" "$path" "$size"
+        all_paths+=("$path")
+    done
+
+    echo ""
+
     # Calculate and display total
+    all_paths+=("${displayed_artifacts[@]}")
     total_size=$(calculate_total_size "${all_paths[@]}")
-    echo -e "${BOLD}${GREEN}✓ Complete! Found $FOUND_COUNT artifacts using $total_size total${RESET}"
+    echo -e "${BOLD}${GREEN}✓ Complete! Found ${#all_paths[@]} artifacts using $total_size total${RESET}"
     echo ""
 
     # Display permission warnings if any
@@ -482,7 +646,27 @@ PERMISSION_ERRORS=0
 main() {
     load_config
     validate_sort_method
+
+    # Prompt for Excel export before search
+    local export_requested=false
+    if prompt_excel_export; then
+        export_requested=true
+    fi
+
+    # Perform search
     search_all_artifacts "$SEARCH_PATH"
+
+    # Export to Excel if requested
+    if [[ "$export_requested" == "true" ]]; then
+        local timestamp=$(date +%Y-%m-%d)
+        local output_file="./artifacts-$timestamp.xlsx"
+
+        echo ""
+        echo -e "${CYAN}Exporting to Excel...${RESET}"
+        local exported_file=$(export_to_excel "$output_file")
+        echo -e "${GREEN}✓ Export complete: $exported_file${RESET}"
+        echo ""
+    fi
 }
 
 main
