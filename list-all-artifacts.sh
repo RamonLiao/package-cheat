@@ -340,14 +340,17 @@ validate_sort_method() {
 # Main Search Logic
 ################################################################################
 
+# Global arrays to store results (needed for display_results function)
+artifact_paths=()
+artifact_types=()
+
 # Search for all enabled artifacts
 search_all_artifacts() {
     local search_path="$1"
 
-    # Arrays to store results (indexed arrays for Bash 3.2)
-    local artifact_paths=()
-    local artifact_types=()
-    local artifact_counts=()
+    # Reset global arrays
+    artifact_paths=()
+    artifact_types=()
 
     echo -e "${BOLD}${CYAN}═══════════════════════════════════════════════════════════════${RESET}"
     echo -e "${BOLD}${CYAN}  Project Artifacts in $search_path${RESET}"
@@ -458,9 +461,10 @@ display_artifact_type() {
     echo ""
 
     # Display each path with size
-    for path in "${paths[@]}"; do
-        local size=$(calculate_size "$path")
-        printf "%-70s ${GREEN}(%s)${RESET}\n" "$path" "$size"
+    local display_path
+    for display_path in "${paths[@]}"; do
+        local size=$(calculate_size "$display_path")
+        printf "%-70s ${GREEN}(%s)${RESET}\n" "$display_path" "$size"
     done
 
     echo ""

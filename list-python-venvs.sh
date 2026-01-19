@@ -363,9 +363,10 @@ display_artifact_type() {
     echo ""
 
     # Display each path with size
-    for path in "${paths[@]}"; do
-        local size=$(calculate_size "$path")
-        printf "%-70s ${GREEN}(%s)${RESET}\n" "$path" "$size"
+    local display_path
+    for display_path in "${paths[@]}"; do
+        local size=$(calculate_size "$display_path")
+        printf "%-70s ${GREEN}(%s)${RESET}\n" "$display_path" "$size"
     done
 
     echo ""
