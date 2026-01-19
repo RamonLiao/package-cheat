@@ -28,9 +28,10 @@ SCRIPT_VERSION="2.0.0"
 
 # Source shared libraries
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib/artifact-search-core.sh"
-source "$SCRIPT_DIR/lib/monorepo-handler.sh"
-source "$SCRIPT_DIR/lib/excel-export.sh"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$PROJECT_ROOT/lib/artifact-search-core.sh"
+source "$PROJECT_ROOT/lib/monorepo-handler.sh"
+source "$PROJECT_ROOT/lib/excel-export.sh"
 
 # Configuration
 CONFIG_DIR="$HOME/.pkgcheat"
