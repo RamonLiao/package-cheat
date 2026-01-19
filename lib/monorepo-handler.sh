@@ -56,3 +56,70 @@ group_artifacts_by_monorepo() {
         fi
     done
 }
+
+# Format monorepo output with expanded artifacts
+# Args: monorepo_path, artifacts_csv, total_size
+format_monorepo_expanded() {
+    local monorepo_path="$1"
+    local artifacts_csv="$2"
+    local total_size="$3"
+
+    # Split CSV into array
+    IFS=',' read -ra artifacts <<< "$artifacts_csv"
+    local count=${#artifacts[@]}
+
+    echo -e "${CYAN}Monorepo: $monorepo_path ($count artifacts, $total_size)${RESET}"
+
+    # Display each artifact with tree indicators
+    local i
+    for i in "${!artifacts[@]}"; do
+        local artifact="${artifacts[$i]}"
+        local size=$(du -sh "$artifact" 2>/dev/null | cut -f1)
+
+        if [[ $i -eq $((count - 1)) ]]; then
+            # Last item
+            printf "  └─ %-70s ${GREEN}(%s)${RESET}\\n" "$artifact" "$size"
+        else
+            # Not last item
+            printf "  ├─ %-70s ${GREEN}(%s)${RESET}\\n" "$artifact" "$size"
+        fi
+    done
+    echo ""
+}
+
+# Format monorepo output with summary
+# Args: monorepo_path, artifacts_csv, total_size
+format_monorepo_summary() {
+    local monorepo_path="$1"
+    local artifacts_csv="$2"
+    local total_size="$3"
+
+    # Split CSV into array
+    IFS=',' read -ra artifacts <<< "$artifacts_csv"
+    local count=${#artifacts[@]}
+
+    echo -e "${CYAN}Monorepo: $monorepo_path ($total_size total, $count workspace artifacts)${RESET}"
+    echo -e "  Details: Use 'pkgcheat -a-detail $monorepo_path' to see all workspaces"
+    echo ""
+}
+
+# Format monorepo output (auto-choose format based on count)
+# Args: monorepo_path, artifacts_csv
+format_monorepo() {
+    local monorepo_path="$1"
+    local artifacts_csv="$2"
+    local threshold=3
+
+    # Split CSV into array
+    IFS=',' read -ra artifacts <<< "$artifacts_csv"
+    local count=${#artifacts[@]}
+
+    # Calculate total size
+    local total_size=$(du -shc "${artifacts[@]}" 2>/dev/null | tail -1 | cut -f1)
+
+    if [[ $count -le $threshold ]]; then
+        format_monorepo_expanded "$monorepo_path" "$artifacts_csv" "$total_size"
+    else
+        format_monorepo_summary "$monorepo_path" "$artifacts_csv" "$total_size"
+    fi
+}
