@@ -92,6 +92,9 @@ get_artifact_description() {
 # Default values
 SEARCH_PATH="."
 SORT_BY="size"
+LEGACY_MODE=false
+VERBOSE=false
+FOLLOW_SYMLINKS=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -100,13 +103,36 @@ while [[ $# -gt 0 ]]; do
             SORT_BY="${1#*=}"
             shift
             ;;
+        --legacy-mode)
+            LEGACY_MODE=true
+            shift
+            ;;
+        --verbose|-v)
+            VERBOSE=true
+            shift
+            ;;
+        --follow-symlinks)
+            FOLLOW_SYMLINKS=true
+            shift
+            ;;
         --help|-h)
-            echo "Usage: $0 [path] [--sort=size|path|date]"
+            echo "Usage: $0 [path] [OPTIONS]"
+            echo ""
+            echo "Arguments:"
+            echo "  path                    Directory to search (default: current directory)"
             echo ""
             echo "Options:"
-            echo "  path              Directory to search (default: current directory)"
-            echo "  --sort=METHOD     Sort by: size, path, or date (default: size)"
-            echo "  --help, -h        Show this help message"
+            echo "  --sort=METHOD           Sort by: size, path, or date (default: size)"
+            echo "  --legacy-mode           Use v1.0 behavior (no project detection or monorepo grouping)"
+            echo "  --verbose, -v           Show detailed search progress and diagnostics"
+            echo "  --follow-symlinks       Follow symbolic links during search"
+            echo "  --help, -h              Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  $0                      # Search current directory"
+            echo "  $0 ~/projects           # Search specific directory"
+            echo "  $0 --legacy-mode        # Use v1.0 behavior"
+            echo "  $0 --verbose ~/code     # Verbose output"
             exit 0
             ;;
         *)
@@ -158,7 +184,14 @@ find_artifacts() {
     )
 
     # Build find command with exclusions
-    local find_cmd="find \"$search_path\" -type d ! -type l -name \"$artifact_name\""
+    local find_cmd="find \"$search_path\" -type d"
+
+    # Only exclude symlinks if not following them
+    if [[ "$FOLLOW_SYMLINKS" != "true" ]]; then
+        find_cmd="$find_cmd ! -type l"
+    fi
+
+    find_cmd="$find_cmd -name \"$artifact_name\""
 
     for excl in "${exclusions[@]}"; do
         find_cmd="$find_cmd ! -path \"$excl\""
@@ -366,44 +399,105 @@ search_all_artifacts() {
     echo -e "${BOLD}${CYAN}═══════════════════════════════════════════════════════════════${RESET}"
     echo ""
 
+    # Show mode indicator if not default
+    if [[ "$LEGACY_MODE" == "true" ]]; then
+        echo -e "${YELLOW}⚙  Legacy Mode (v1.0 behavior)${RESET}"
+    fi
+    if [[ "$VERBOSE" == "true" ]]; then
+        echo -e "${YELLOW}⚙  Verbose Mode${RESET}"
+    fi
+    if [[ "$FOLLOW_SYMLINKS" == "true" ]]; then
+        echo -e "${YELLOW}⚙  Following symbolic links${RESET}"
+    fi
+
     echo -e "${YELLOW}🔍 Searching for artifacts in $search_path...${RESET}"
 
     SEARCH_START_TIME=$(date +%s)
 
-    # Determine which artifact types to search for
-    local search_node=false
-    local search_python=false
+    # Use legacy mode if requested
+    if [[ "$LEGACY_MODE" == "true" ]]; then
+        # V1.0 behavior: simple search without project detection
+        if [[ "$VERBOSE" == "true" ]]; then
+            echo -e "${CYAN}[VERBOSE] Using legacy search (v1.0)${RESET}"
+        fi
 
-    while IFS= read -r artifact_name; do
-        [[ -z "$artifact_name" ]] && continue
+        while IFS= read -r artifact_name; do
+            [[ -z "$artifact_name" ]] && continue
 
-        # Map artifact names to types
-        case "$artifact_name" in
-            node_modules|bower_components|.pnpm-store)
-                search_node=true
-                ;;
-            .venv|venv|env|.virtualenv)
-                search_python=true
-                ;;
-        esac
-    done < <(get_enabled_artifacts)
+            if [[ "$VERBOSE" == "true" ]]; then
+                echo -e "${CYAN}[VERBOSE] Searching for: $artifact_name${RESET}"
+            fi
 
-    # Search for Node artifacts
-    if [[ "$search_node" == "true" ]]; then
-        search_artifacts_by_type "$search_path" "node" > /dev/null
+            while IFS= read -r artifact_path; do
+                [[ -z "$artifact_path" ]] && continue
+
+                artifact_paths+=("$artifact_path")
+                artifact_types+=("$artifact_name")
+                ((FOUND_COUNT++))
+                show_progress $FOUND_COUNT
+                check_search_time
+
+                if [[ "$VERBOSE" == "true" ]]; then
+                    echo -e "\n${CYAN}[VERBOSE] Found: $artifact_path${RESET}"
+                fi
+            done < <(find_artifacts "$search_path" "$artifact_name")
+        done < <(get_enabled_artifacts)
+
+        # Copy to uppercase arrays for compatibility
+        ARTIFACT_PATHS=("${artifact_paths[@]}")
+        ARTIFACT_TYPES=("${artifact_types[@]}")
+    else
+        # V2.0 behavior: project-aware search with monorepo detection
+        if [[ "$VERBOSE" == "true" ]]; then
+            echo -e "${CYAN}[VERBOSE] Using smart search (v2.0 with project detection)${RESET}"
+        fi
+
+        # Determine which artifact types to search for
+        local search_node=false
+        local search_python=false
+
+        while IFS= read -r artifact_name; do
+            [[ -z "$artifact_name" ]] && continue
+
+            # Map artifact names to types
+            case "$artifact_name" in
+                node_modules|bower_components|.pnpm-store)
+                    search_node=true
+                    ;;
+                .venv|venv|env|.virtualenv)
+                    search_python=true
+                    ;;
+            esac
+        done < <(get_enabled_artifacts)
+
+        # Search for Node artifacts
+        if [[ "$search_node" == "true" ]]; then
+            if [[ "$VERBOSE" == "true" ]]; then
+                echo -e "${CYAN}[VERBOSE] Searching for Node.js artifacts with project validation${RESET}"
+            fi
+            search_artifacts_by_type "$search_path" "node" > /dev/null
+        fi
+
+        # Search for Python artifacts
+        if [[ "$search_python" == "true" ]]; then
+            if [[ "$VERBOSE" == "true" ]]; then
+                echo -e "${CYAN}[VERBOSE] Searching for Python artifacts with project validation${RESET}"
+            fi
+            search_artifacts_by_type "$search_path" "python" > /dev/null
+        fi
+
+        # Update FOUND_COUNT from actual results
+        FOUND_COUNT=${#ARTIFACT_PATHS[@]}
+
+        # Populate old arrays for compatibility
+        artifact_paths=("${ARTIFACT_PATHS[@]}")
+        artifact_types=("${ARTIFACT_TYPES[@]}")
+
+        if [[ "$VERBOSE" == "true" ]]; then
+            echo -e "${CYAN}[VERBOSE] Found ${FOUND_COUNT} artifacts after project validation${RESET}"
+            echo -e "${CYAN}[VERBOSE] Grouping artifacts by monorepo...${RESET}"
+        fi
     fi
-
-    # Search for Python artifacts
-    if [[ "$search_python" == "true" ]]; then
-        search_artifacts_by_type "$search_path" "python" > /dev/null
-    fi
-
-    # Update FOUND_COUNT from actual results
-    FOUND_COUNT=${#ARTIFACT_PATHS[@]}
-
-    # Populate old arrays for compatibility
-    artifact_paths=("${ARTIFACT_PATHS[@]}")
-    artifact_types=("${ARTIFACT_TYPES[@]}")
 
     clear_progress
     echo ""
@@ -429,7 +523,34 @@ display_results() {
     local total_size="0B"
     local all_paths=()
 
-    # Group artifacts by monorepo
+    # Skip monorepo grouping in legacy mode
+    if [[ "$LEGACY_MODE" == "true" ]]; then
+        # Legacy mode: simple list without grouping
+        echo -e "${BOLD}${CYAN}━━━ Artifacts Found ━━━${RESET}"
+        echo ""
+
+        local i
+        for i in "${!artifact_paths[@]}"; do
+            local path="${artifact_paths[$i]}"
+            local size=$(calculate_size "$path")
+            printf "%-70s ${GREEN}(%s)${RESET}\\n" "$path" "$size"
+            all_paths+=("$path")
+        done
+
+        echo ""
+
+        # Calculate and display total
+        total_size=$(calculate_total_size "${all_paths[@]}")
+        echo -e "${BOLD}${GREEN}✓ Complete! Found ${#all_paths[@]} artifacts using $total_size total${RESET}"
+        echo ""
+        return
+    fi
+
+    # V2.0: Group artifacts by monorepo
+    if [[ "$VERBOSE" == "true" ]]; then
+        echo -e "${CYAN}[VERBOSE] Detecting monorepos...${RESET}"
+    fi
+
     group_artifacts_by_monorepo
 
     # Track which artifacts are displayed as part of monorepo
@@ -437,6 +558,10 @@ display_results() {
 
     # Display monorepos first
     if [[ ${#MONOREPO_ROOTS[@]} -gt 0 ]]; then
+        if [[ "$VERBOSE" == "true" ]]; then
+            echo -e "${CYAN}[VERBOSE] Found ${#MONOREPO_ROOTS[@]} monorepo(s)${RESET}"
+        fi
+
         local i
         for i in "${!MONOREPO_ROOTS[@]}"; do
             local mono_root="${MONOREPO_ROOTS[$i]}"
