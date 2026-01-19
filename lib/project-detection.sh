@@ -104,3 +104,81 @@ get_project_type() {
         echo "none"
     fi
 }
+
+# Check if package.json contains workspaces configuration
+# Returns: 0 if workspaces found, 1 otherwise
+has_npm_workspaces() {
+    local dir_path="$1"
+    local package_json="$dir_path/package.json"
+
+    if [[ ! -f "$package_json" ]]; then
+        return 1
+    fi
+
+    # Check for workspaces field using grep (avoid jq dependency for now)
+    if grep -q '"workspaces"' "$package_json" 2>/dev/null; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Check if directory has pnpm-workspace.yaml
+has_pnpm_workspaces() {
+    local dir_path="$1"
+
+    if [[ -f "$dir_path/pnpm-workspace.yaml" ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Check if directory has lerna.json
+has_lerna_workspaces() {
+    local dir_path="$1"
+
+    if [[ -f "$dir_path/lerna.json" ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Check if directory has nx.json
+has_nx_workspaces() {
+    local dir_path="$1"
+
+    if [[ -f "$dir_path/nx.json" ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Check if directory has turbo.json
+has_turbo_workspaces() {
+    local dir_path="$1"
+
+    if [[ -f "$dir_path/turbo.json" ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Check if directory is a monorepo root
+# Returns: 0 if monorepo, 1 otherwise
+is_monorepo_root() {
+    local dir_path="$1"
+
+    if has_npm_workspaces "$dir_path" || \
+       has_pnpm_workspaces "$dir_path" || \
+       has_lerna_workspaces "$dir_path" || \
+       has_nx_workspaces "$dir_path" || \
+       has_turbo_workspaces "$dir_path"; then
+        return 0
+    fi
+
+    return 1
+}
