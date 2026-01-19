@@ -354,9 +354,12 @@ artifact_types=()
 search_all_artifacts() {
     local search_path="$1"
 
-    # Reset global arrays
+    # Reset global arrays (both old and new format)
     artifact_paths=()
     artifact_types=()
+    ARTIFACT_PATHS=()
+    ARTIFACT_TYPES=()
+    ARTIFACT_PROJECTS=()
 
     echo -e "${BOLD}${CYAN}═══════════════════════════════════════════════════════════════${RESET}"
     echo -e "${BOLD}${CYAN}  Project Artifacts in $search_path${RESET}"
@@ -367,28 +370,40 @@ search_all_artifacts() {
 
     SEARCH_START_TIME=$(date +%s)
 
-    # Search for each enabled artifact type
+    # Determine which artifact types to search for
+    local search_node=false
+    local search_python=false
+
     while IFS= read -r artifact_name; do
         [[ -z "$artifact_name" ]] && continue
 
-        local type_paths=()
-
-        while IFS= read -r artifact_path; do
-            [[ -z "$artifact_path" ]] && continue
-
-            artifact_paths+=("$artifact_path")
-            artifact_types+=("$artifact_name")
-            type_paths+=("$artifact_path")
-            ((FOUND_COUNT++))
-            show_progress $FOUND_COUNT
-            check_search_time
-
-        done < <(find_artifacts "$search_path" "$artifact_name")
-
-        if [[ ${#type_paths[@]} -gt 0 ]]; then
-            artifact_counts+=("${#type_paths[@]}")
-        fi
+        # Map artifact names to types
+        case "$artifact_name" in
+            node_modules|bower_components|.pnpm-store)
+                search_node=true
+                ;;
+            .venv|venv|env|.virtualenv)
+                search_python=true
+                ;;
+        esac
     done < <(get_enabled_artifacts)
+
+    # Search for Node artifacts
+    if [[ "$search_node" == "true" ]]; then
+        search_artifacts_by_type "$search_path" "node" > /dev/null
+    fi
+
+    # Search for Python artifacts
+    if [[ "$search_python" == "true" ]]; then
+        search_artifacts_by_type "$search_path" "python" > /dev/null
+    fi
+
+    # Update FOUND_COUNT from actual results
+    FOUND_COUNT=${#ARTIFACT_PATHS[@]}
+
+    # Populate old arrays for compatibility
+    artifact_paths=("${ARTIFACT_PATHS[@]}")
+    artifact_types=("${ARTIFACT_TYPES[@]}")
 
     clear_progress
     echo ""
