@@ -58,3 +58,27 @@ artifact_matches_project() {
 
     return 1  # No match
 }
+
+# Find the nearest parent directory that is a project root
+# Args: directory_path
+# Returns: project_path or empty string if none found
+find_parent_project() {
+    local current_path="$1"
+
+    # Walk up directory tree
+    while [[ "$current_path" != "/" ]]; do
+        local project_type=$(get_project_type "$current_path")
+
+        if [[ "$project_type" != "none" ]]; then
+            echo "$current_path"
+            return 0
+        fi
+
+        # Move to parent directory
+        current_path="$(dirname "$current_path")"
+    done
+
+    # No project found
+    echo ""
+    return 1
+}
