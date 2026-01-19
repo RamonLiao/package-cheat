@@ -660,7 +660,7 @@ main() {
     # Export to Excel if requested
     if [[ "$export_requested" == "true" ]]; then
         local timestamp=$(date +%Y-%m-%d)
-        local output_file="./artifacts-$timestamp.xlsx"
+        local output_file="$HOME/Desktop/artifacts-$timestamp.xlsx"
 
         echo ""
         echo -e "${CYAN}Exporting to Excel...${RESET}"
