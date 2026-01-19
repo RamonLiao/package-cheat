@@ -408,39 +408,57 @@ search_all_artifacts() {
     display_results "$search_path"
 }
 
-# Display formatted results
+# Display formatted results with monorepo grouping
 display_results() {
     local search_path="$1"
     local total_size="0B"
     local all_paths=()
 
-    # Group by artifact type
-    local current_type=""
-    local type_paths=()
+    # Group artifacts by monorepo
+    group_artifacts_by_monorepo
 
-    for i in "${!artifact_paths[@]}"; do
-        local path="${artifact_paths[$i]}"
-        local type="${artifact_types[$i]}"
+    # Track which artifacts are displayed as part of monorepo
+    local displayed_artifacts=()
 
-        # If we hit a new type, display previous type
-        if [[ -n "$current_type" ]] && [[ "$type" != "$current_type" ]]; then
-            display_artifact_type "$current_type" "${type_paths[@]}"
-            type_paths=()
-        fi
+    # Display monorepos first
+    if [[ ${#MONOREPO_ROOTS[@]} -gt 0 ]]; then
+        local i
+        for i in "${!MONOREPO_ROOTS[@]}"; do
+            local mono_root="${MONOREPO_ROOTS[$i]}"
+            local mono_artifacts="${MONOREPO_ARTIFACTS[$i]}"
 
-        type_paths+=("$path")
-        all_paths+=("$path")
-        current_type="$type"
-    done
+            format_monorepo "$mono_root" "$mono_artifacts"
 
-    # Display last type
-    if [[ -n "$current_type" ]]; then
-        display_artifact_type "$current_type" "${type_paths[@]}"
+            # Mark these artifacts as displayed
+            IFS=',' read -ra arts <<< "$mono_artifacts"
+            displayed_artifacts+=("${arts[@]}")
+        done
     fi
 
+    # Display standalone artifacts (not in monorepos)
+    echo -e "${BOLD}${CYAN}━━━ Standalone Projects ━━━${RESET}"
+    echo ""
+
+    local i
+    for i in "${!artifact_paths[@]}"; do
+        local path="${artifact_paths[$i]}"
+
+        # Skip if already displayed in monorepo
+        if [[ " ${displayed_artifacts[@]} " =~ " ${path} " ]]; then
+            continue
+        fi
+
+        local size=$(calculate_size "$path")
+        printf "%-70s ${GREEN}(%s)${RESET}\\n" "$path" "$size"
+        all_paths+=("$path")
+    done
+
+    echo ""
+
     # Calculate and display total
+    all_paths+=("${displayed_artifacts[@]}")
     total_size=$(calculate_total_size "${all_paths[@]}")
-    echo -e "${BOLD}${GREEN}✓ Complete! Found $FOUND_COUNT artifacts using $total_size total${RESET}"
+    echo -e "${BOLD}${GREEN}✓ Complete! Found ${#all_paths[@]} artifacts using $total_size total${RESET}"
     echo ""
 
     # Display permission warnings if any
