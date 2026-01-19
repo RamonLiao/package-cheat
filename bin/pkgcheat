@@ -776,6 +776,215 @@ export_single_manager_md() {
 # Interactive Menu
 ################################################################################
 
+# Helper function to wait for user input
+press_any_key() {
+    echo ""
+    echo "Press any key to continue..."
+    read -n 1 -s
+}
+
+################################################################################
+# Configuration UI
+################################################################################
+
+# Helper: Display checkbox
+checkbox() {
+    local value="$1"
+    if [[ "$value" == "enabled" ]]; then
+        echo "✓"
+    else
+        echo " "
+    fi
+}
+
+configure_artifacts() {
+    local config_file="$HOME/.pkgcheat/artifacts.conf"
+
+    # Load current config using simple variables (Bash 3.2 compatible)
+    local cfg_node_modules="enabled"
+    local cfg_venv_dot="enabled"
+    local cfg_venv="enabled"
+    local cfg_env="disabled"
+    local cfg_virtualenv="disabled"
+    local cfg_vendor="disabled"
+    local cfg_target="disabled"
+    local cfg_sort_by="size"
+
+    if [[ -f "$config_file" ]]; then
+        while IFS='=' read -r key value; do
+            [[ "$key" =~ ^#.*$ ]] && continue
+            [[ -z "$key" ]] && continue
+            case "$key" in
+                node_modules) cfg_node_modules="$value" ;;
+                .venv) cfg_venv_dot="$value" ;;
+                venv) cfg_venv="$value" ;;
+                env) cfg_env="$value" ;;
+                .virtualenv) cfg_virtualenv="$value" ;;
+                vendor) cfg_vendor="$value" ;;
+                target) cfg_target="$value" ;;
+                sort_by) cfg_sort_by="$value" ;;
+            esac
+        done < <(grep -v '^\[' "$config_file" | grep -v '^$' | grep -v '^#')
+    fi
+
+    while true; do
+        clear
+        echo -e "${BOLD}${CYAN}════════════════════════════════════════════════════════${RESET}"
+        echo -e "${BOLD}${CYAN}  Configure Artifact Types${RESET}"
+        echo -e "${BOLD}${CYAN}════════════════════════════════════════════════════════${RESET}"
+        echo ""
+
+        echo -e "${BOLD}JavaScript:${RESET}"
+        echo "  1) [$(checkbox $cfg_node_modules)] node_modules"
+        echo ""
+
+        echo -e "${BOLD}Python:${RESET}"
+        echo "  2) [$(checkbox $cfg_venv_dot)] .venv"
+        echo "  3) [$(checkbox $cfg_venv)] venv"
+        echo "  4) [$(checkbox $cfg_env)] env"
+        echo "  5) [$(checkbox $cfg_virtualenv)] .virtualenv"
+        echo ""
+
+        echo -e "${BOLD}Other Languages:${RESET}"
+        echo "  6) [$(checkbox $cfg_vendor)] vendor (PHP/Ruby)"
+        echo "  7) [$(checkbox $cfg_target)] target (Rust)"
+        echo ""
+
+        echo -e "${BOLD}Preferences:${RESET}"
+        echo "  Sort by: $cfg_sort_by"
+        echo ""
+
+        echo "Commands:"
+        echo "  1-7) Toggle item"
+        echo "  s) Change sort preference"
+        echo "  r) Reset to defaults"
+        echo "  d) Done (save and exit)"
+        echo ""
+        echo -n "Select option: "
+        read -r choice
+
+        case $choice in
+            1) [[ "$cfg_node_modules" == "enabled" ]] && cfg_node_modules="disabled" || cfg_node_modules="enabled" ;;
+            2) [[ "$cfg_venv_dot" == "enabled" ]] && cfg_venv_dot="disabled" || cfg_venv_dot="enabled" ;;
+            3) [[ "$cfg_venv" == "enabled" ]] && cfg_venv="disabled" || cfg_venv="enabled" ;;
+            4) [[ "$cfg_env" == "enabled" ]] && cfg_env="disabled" || cfg_env="enabled" ;;
+            5) [[ "$cfg_virtualenv" == "enabled" ]] && cfg_virtualenv="disabled" || cfg_virtualenv="enabled" ;;
+            6) [[ "$cfg_vendor" == "enabled" ]] && cfg_vendor="disabled" || cfg_vendor="enabled" ;;
+            7) [[ "$cfg_target" == "enabled" ]] && cfg_target="disabled" || cfg_target="enabled" ;;
+            s|S)
+                echo "Sort by: (s)ize, (p)ath, (d)ate"
+                read -r sort_choice
+                case $sort_choice in
+                    s|S) cfg_sort_by="size" ;;
+                    p|P) cfg_sort_by="path" ;;
+                    d|D) cfg_sort_by="date" ;;
+                esac
+                ;;
+            r|R)
+                echo "Reset to defaults? (y/n)"
+                read -r confirm
+                if [[ "$confirm" == "y" ]]; then
+                    cfg_node_modules="enabled"
+                    cfg_venv_dot="enabled"
+                    cfg_venv="enabled"
+                    cfg_env="disabled"
+                    cfg_virtualenv="disabled"
+                    cfg_vendor="disabled"
+                    cfg_target="disabled"
+                    cfg_sort_by="size"
+                fi
+                ;;
+            d|D)
+                # Save config
+                mkdir -p "$(dirname "$config_file")"
+                cat > "$config_file" << EOF
+# pkgcheat artifact configuration
+# Enable/disable artifact types and set preferences
+
+[artifacts]
+node_modules=$cfg_node_modules
+.venv=$cfg_venv_dot
+venv=$cfg_venv
+env=$cfg_env
+.virtualenv=$cfg_virtualenv
+vendor=$cfg_vendor
+target=$cfg_target
+
+[preferences]
+sort_by=$cfg_sort_by
+# Options: size, path, date
+EOF
+                echo -e "${GREEN}✓ Configuration saved${RESET}"
+                sleep 1
+                return
+                ;;
+        esac
+    done
+}
+
+################################################################################
+# Artifacts Submenu
+################################################################################
+
+show_artifacts_menu() {
+    local search_path="${1:-.}"
+
+    while true; do
+        clear
+        echo -e "${BOLD}${CYAN}════════════════════════════════════════════════════════${RESET}"
+        echo -e "${BOLD}${CYAN}  Project Artifacts${RESET}"
+        echo -e "${BOLD}${CYAN}════════════════════════════════════════════════════════${RESET}"
+        echo ""
+        echo -e "Search path: ${GREEN}$search_path${RESET}"
+        echo ""
+        echo "1) List all artifacts"
+        echo "2) List node_modules only"
+        echo "3) List Python virtual environments only"
+        echo "4) Configure artifact types"
+        echo "5) Change search path"
+        echo "6) Back to main menu"
+        echo ""
+        echo -n "Select option: "
+        read -r choice
+
+        case $choice in
+            1)
+                run_artifacts_all "$search_path"
+                press_any_key
+                ;;
+            2)
+                run_artifacts_node "$search_path"
+                press_any_key
+                ;;
+            3)
+                run_artifacts_python "$search_path"
+                press_any_key
+                ;;
+            4)
+                configure_artifacts
+                ;;
+            5)
+                echo -n "Enter new search path: "
+                read -r new_path
+                if [[ -d "$new_path" ]]; then
+                    search_path="$(cd "$new_path" && pwd)"
+                    echo -e "${GREEN}✓ Search path updated${RESET}"
+                else
+                    echo -e "${RED}✗ Invalid path${RESET}"
+                fi
+                sleep 1
+                ;;
+            6)
+                return
+                ;;
+            *)
+                echo -e "${RED}Invalid option${RESET}"
+                sleep 1
+                ;;
+        esac
+    done
+}
+
 show_main_menu() {
     while true; do
         clear
@@ -789,11 +998,12 @@ show_main_menu() {
         print_color "$CYAN" "  4) Search for commands"
         print_color "$CYAN" "  5) Export cheatsheet to markdown"
         print_color "$CYAN" "  6) Help / Usage information"
-        print_color "$CYAN" "  7) List all global packages"
-        print_color "$CYAN" "  8) Exit"
+        print_color "$CYAN" "  7) Show global packages (system-wide)"
+        print_color "$CYAN" "  8) Show project artifacts (node_modules, .venv, etc.)"
+        print_color "$CYAN" "  9) Exit"
         echo ""
 
-        read -p "Enter your choice [1-8]: " choice
+        read -p "Enter your choice [1-9]: " choice
 
         case $choice in
             1)
@@ -827,6 +1037,9 @@ show_main_menu() {
                 list_all_globals
                 ;;
             8)
+                show_artifacts_menu "."
+                ;;
+            9)
                 print_color "$GREEN" "Thank you for using pkgcheat!"
                 exit 0
                 ;;
@@ -979,6 +1192,11 @@ show_help() {
     echo "  -s, --search KEYWORD    Search for commands across all managers"
     echo "  -c, --compare           Compare equivalent commands across JS managers"
     echo ""
+    echo -e "${BOLD}ARTIFACT MANAGEMENT:${RESET}"
+    echo "  --artifacts [PATH]      List all project artifacts (node_modules, .venv, etc.)"
+    echo "  --artifacts-node [PATH] List node_modules directories only"
+    echo "  --artifacts-python [PATH] List Python virtual environments only"
+    echo ""
     echo -e "${BOLD}EXAMPLES:${RESET}"
     echo "  pkgcheat                # Launch interactive mode"
     echo "  pkgcheat npm            # Show npm cheatsheet directly"
@@ -987,6 +1205,9 @@ show_help() {
     echo "  pkgcheat -e npm         # Export npm cheatsheet to markdown"
     echo "  pkgcheat -e all         # Export all detected managers to markdown"
     echo "  pkgcheat -c             # Show command comparison"
+    echo "  pkgcheat --artifacts .  # List all artifacts in current directory"
+    echo "  pkgcheat --artifacts-node ~/Projects  # List node_modules in ~/Projects"
+    echo "  pkgcheat --artifacts-python .         # List Python venvs in current directory"
     echo ""
     echo -e "${BOLD}SUPPORTED PACKAGE MANAGERS:${RESET}"
     echo "  JavaScript/Node.js:  npm, pnpm, yarn, bun"
@@ -1041,6 +1262,29 @@ show_all_managers() {
     done
 
     echo ""
+}
+
+################################################################################
+# Artifact Discovery Functions
+################################################################################
+
+# Get script directory for calling standalone scripts
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Run artifacts scripts
+run_artifacts_all() {
+    local path="${1:-.}"
+    "${SCRIPT_DIR}/../list-all-artifacts.sh" "$path"
+}
+
+run_artifacts_node() {
+    local path="${1:-.}"
+    "${SCRIPT_DIR}/../list-node-modules.sh" "$path"
+}
+
+run_artifacts_python() {
+    local path="${1:-.}"
+    "${SCRIPT_DIR}/../list-python-venvs.sh" "$path"
 }
 
 ################################################################################
@@ -1102,6 +1346,18 @@ main() {
                 5) display_comparison "cache_clean" ;;
                 *) print_color "$RED" "Invalid choice" ; exit 1 ;;
             esac
+            ;;
+        --artifacts)
+            ARTIFACTS_PATH="${2:-.}"
+            run_artifacts_all "$ARTIFACTS_PATH"
+            ;;
+        --artifacts-node)
+            ARTIFACTS_PATH="${2:-.}"
+            run_artifacts_node "$ARTIFACTS_PATH"
+            ;;
+        --artifacts-python)
+            ARTIFACTS_PATH="${2:-.}"
+            run_artifacts_python "$ARTIFACTS_PATH"
             ;;
         *)
             # Assume it's a package manager name
