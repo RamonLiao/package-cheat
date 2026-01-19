@@ -4,7 +4,7 @@ Interactive bash tool that detects installed package managers on macOS and provi
 
 **New**: Project artifact discovery - find all `node_modules`, `.venv`, and other dependency directories across your filesystem!
 
-**Bonus**: `list-all-packages.sh` - list all installed packages from all managers in one command!
+**Bonus**: `scripts/list-all-packages.sh` - list all installed packages from all managers in one command!
 
 ## Quick Start
 
@@ -14,7 +14,7 @@ cd package-cheat
 ./install.sh
 ```
 
-Then run `pkgcheat` to launch, or `./list-all-packages.sh` for a quick package list.
+Then run `pkgcheat` to launch, or `./scripts/list-all-packages.sh` for a quick package list.
 
 ## Features
 
@@ -84,11 +84,11 @@ pkgcheat -a-python [path]    # List Python venvs only
 
 **Standalone Scripts:**
 ```bash
-./list-all-artifacts.sh ~/Projects                  # Smart search with monorepo detection
-./list-all-artifacts.sh ~/Projects --legacy-mode    # v1.0 behavior
-./list-all-artifacts.sh ~/Projects --verbose        # Show detailed progress
-./list-node-modules.sh ~/Projects
-./list-python-venvs.sh ~/Projects
+./scripts/list-all-artifacts.sh ~/Projects                  # Smart search with monorepo detection
+./scripts/list-all-artifacts.sh ~/Projects --legacy-mode    # v1.0 behavior
+./scripts/list-all-artifacts.sh ~/Projects --verbose        # Show detailed progress
+./scripts/list-node-modules.sh ~/Projects
+./scripts/list-python-venvs.sh ~/Projects
 ```
 
 **V2.0 Features:**
@@ -157,26 +157,26 @@ pkgcheat -a .
 
 Use legacy mode for simple flat list:
 ```bash
-./list-all-artifacts.sh ~/Projects --legacy-mode
+./scripts/list-all-artifacts.sh ~/Projects --legacy-mode
 ```
 
 Export results to Excel:
 ```bash
-./list-all-artifacts.sh ~/Projects
+./scripts/list-all-artifacts.sh ~/Projects
 # Prompts: "Export results to Excel? [y/N]:"
 # Creates: ./artifacts-2026-01-19.xlsx
 ```
 
-## list-all-packages.sh
+## scripts/list-all-packages.sh
 
 Standalone script to quickly list all installed packages from all detected managers.
 
 ```bash
 # Run directly (no installation needed)
-./list-all-packages.sh
+./scripts/list-all-packages.sh
 
 # Or make it globally available
-sudo ln -s "$(pwd)/list-all-packages.sh" /usr/local/bin/list-all-packages
+sudo ln -s "$(pwd)/scripts/list-all-packages.sh" /usr/local/bin/list-all-packages
 list-all-packages
 ```
 
