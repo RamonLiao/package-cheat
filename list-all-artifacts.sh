@@ -24,7 +24,13 @@ BOLD='\033[1m'
 RESET='\033[0m'
 
 # Version
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="2.0.0"
+
+# Source shared libraries
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/artifact-search-core.sh"
+source "$SCRIPT_DIR/lib/monorepo-handler.sh"
+source "$SCRIPT_DIR/lib/excel-export.sh"
 
 # Configuration
 CONFIG_DIR="$HOME/.pkgcheat"
@@ -482,7 +488,27 @@ PERMISSION_ERRORS=0
 main() {
     load_config
     validate_sort_method
+
+    # Prompt for Excel export before search
+    local export_requested=false
+    if prompt_excel_export; then
+        export_requested=true
+    fi
+
+    # Perform search
     search_all_artifacts "$SEARCH_PATH"
+
+    # Export to Excel if requested
+    if [[ "$export_requested" == "true" ]]; then
+        local timestamp=$(date +%Y-%m-%d)
+        local output_file="./artifacts-$timestamp.xlsx"
+
+        echo ""
+        echo -e "${CYAN}Exporting to Excel...${RESET}"
+        local exported_file=$(export_to_excel "$output_file")
+        echo -e "${GREEN}✓ Export complete: $exported_file${RESET}"
+        echo ""
+    fi
 }
 
 main
