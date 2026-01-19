@@ -11,9 +11,11 @@
 
 set -eo pipefail
 
+# Get the lib directory path
+LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Source project detection library
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/project-detection.sh"
+source "$LIB_DIR/project-detection.sh"
 
 # Artifact registry (parallel arrays for Bash 3.2)
 ARTIFACT_PATHS=()          # /path/to/artifact

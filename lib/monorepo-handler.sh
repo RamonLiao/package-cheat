@@ -9,6 +9,9 @@
 
 set -eo pipefail
 
+# Get the lib directory path
+LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Colors
 CYAN='\033[0;36m'
 GREEN='\033[0;32m'
@@ -36,7 +39,7 @@ group_artifacts_by_monorepo() {
         [[ " ${processed_monorepos[@]} " =~ " ${project_path} " ]] && continue
 
         # Check if project is monorepo
-        source "$(dirname "${BASH_SOURCE[0]}")/project-detection.sh"
+        source "$LIB_DIR/project-detection.sh"
         if is_monorepo_root "$project_path"; then
             # Find all artifacts under this monorepo
             local mono_artifacts=()
