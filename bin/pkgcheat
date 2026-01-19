@@ -1268,23 +1268,31 @@ show_all_managers() {
 # Artifact Discovery Functions
 ################################################################################
 
-# Get script directory for calling standalone scripts
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve symlink to get actual script location (works on Linux and macOS)
+# This ensures we find the project root regardless of where pkgcheat is symlinked
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+PKGCHEAT_INSTALL_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+PROJECT_ROOT=$(dirname "$PKGCHEAT_INSTALL_DIR")  # Go up one level from 'bin'
 
 # Run artifacts scripts
 run_artifacts_all() {
     local path="${1:-.}"
-    "${SCRIPT_DIR}/../scripts/list-all-artifacts.sh" "$path"
+    "${PROJECT_ROOT}/scripts/list-all-artifacts.sh" "$path"
 }
 
 run_artifacts_node() {
     local path="${1:-.}"
-    "${SCRIPT_DIR}/../scripts/list-node-modules.sh" "$path"
+    "${PROJECT_ROOT}/scripts/list-node-modules.sh" "$path"
 }
 
 run_artifacts_python() {
     local path="${1:-.}"
-    "${SCRIPT_DIR}/../scripts/list-python-venvs.sh" "$path"
+    "${PROJECT_ROOT}/scripts/list-python-venvs.sh" "$path"
 }
 
 ################################################################################
