@@ -1274,17 +1274,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Run artifacts scripts
 run_artifacts_all() {
     local path="${1:-.}"
-    "${SCRIPT_DIR}/../list-all-artifacts.sh" "$path"
+    "${SCRIPT_DIR}/../scripts/list-all-artifacts.sh" "$path"
 }
 
 run_artifacts_node() {
     local path="${1:-.}"
-    "${SCRIPT_DIR}/../list-node-modules.sh" "$path"
+    "${SCRIPT_DIR}/../scripts/list-node-modules.sh" "$path"
 }
 
 run_artifacts_python() {
     local path="${1:-.}"
-    "${SCRIPT_DIR}/../list-python-venvs.sh" "$path"
+    "${SCRIPT_DIR}/../scripts/list-python-venvs.sh" "$path"
 }
 
 ################################################################################
